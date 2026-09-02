@@ -1,0 +1,28 @@
+
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AbyssusTimer.App", "AbyssusTimer.App\AbyssusTimer.App.csproj", "{6E85C606-1DF3-4067-A650-6A2C6262E52F}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AbyssusOverlay.Core", "AbyssusOverlay.Core\AbyssusOverlay.Core.csproj", "{0D4F5581-0D95-46AD-BE29-6C9754842F93}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{6E85C606-1DF3-4067-A650-6A2C6262E52F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6E85C606-1DF3-4067-A650-6A2C6262E52F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6E85C606-1DF3-4067-A650-6A2C6262E52F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6E85C606-1DF3-4067-A650-6A2C6262E52F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0D4F5581-0D95-46AD-BE29-6C9754842F93}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0D4F5581-0D95-46AD-BE29-6C9754842F93}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0D4F5581-0D95-46AD-BE29-6C9754842F93}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0D4F5581-0D95-46AD-BE29-6C9754842F93}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal

@@ -1,0 +1,45 @@
+<Application x:Class="AbyssusTimer.App.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:AbyssusTimer.App"
+             xmlns:converters="clr-namespace:AbyssusTimer.App.Converters">
+    <Application.Resources>
+        <SolidColorBrush x:Key="BackgroundBrush" Color="#0A1210" />
+        <SolidColorBrush x:Key="SurfaceBrush" Color="#17211D" />
+        <SolidColorBrush x:Key="SurfaceRaisedBrush" Color="#22302A" />
+        <SolidColorBrush x:Key="HairlineBrush" Color="#3A4A44" />
+        <SolidColorBrush x:Key="BrassBrush" Color="#C98F3F" />
+        <SolidColorBrush x:Key="BrassLightBrush" Color="#E3B06A" />
+        <SolidColorBrush x:Key="BrassDimBrush" Color="#8A6430" />
+        <SolidColorBrush x:Key="TealGlowBrush" Color="#3FD6C0" />
+        <SolidColorBrush x:Key="ToxicBrush" Color="#C7FF3D" />
+        <SolidColorBrush x:Key="WarningBrush" Color="#E3C93D" />
+        <SolidColorBrush x:Key="DangerBrush" Color="#7A2E2E" />
+        <SolidColorBrush x:Key="DangerTextBrush" Color="#E36A6A" />
+        <SolidColorBrush x:Key="MagentaBrush" Color="#D94F9A" />
+        <SolidColorBrush x:Key="TextPrimaryBrush" Color="#ECE3D0" />
+        <SolidColorBrush x:Key="TextMutedBrush" Color="#8A9994" />
+        <SolidColorBrush x:Key="TextDimBrush" Color="#56635E" />
+        <SolidColorBrush x:Key="HoverSurfaceBrush" Color="#1F2A26" />
+        <SolidColorBrush x:Key="PressedSurfaceBrush" Color="#0F1815" />
+
+        <converters:NullToVisibilityConverter x:Key="NullToVisibilityConverter" />
+        <converters:PrimaryTimerToBrushConverter x:Key="PrimaryTimerToBrushConverter" />
+        <converters:InverseBoolConverter x:Key="InverseBoolConverter" />
+        <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter" />
+        <converters:RunCategoryToDisplayNameConverter x:Key="RunCategoryToDisplayNameConverter" />
+        <converters:DeltaSeverityToBrushConverter x:Key="DeltaSeverityToBrushConverter" />
+        <converters:ComparisonSourceToDisplayNameConverter x:Key="ComparisonSourceToDisplayNameConverter" />
+        <converters:ComparisonSourceToVisibilityConverter x:Key="ComparisonSourceToVisibilityConverter" />
+        <converters:IndicesEqualConverter x:Key="IndicesEqualConverter" />
+        <converters:SplitDetailLevelToVisibilityConverter x:Key="SplitDetailLevelToVisibilityConverter" />
+        <converters:SplitListOverflowBehaviorToMaxHeightConverter x:Key="SplitListOverflowBehaviorToMaxHeightConverter" />
+        <converters:SplitDetailLevelToDisplayNameConverter x:Key="SplitDetailLevelToDisplayNameConverter" />
+        <converters:SplitListOverflowBehaviorToDisplayNameConverter x:Key="SplitListOverflowBehaviorToDisplayNameConverter" />
+        <converters:HexColorToBrushConverter x:Key="HexColorToBrushConverter" />
+        <converters:TimeBackgroundBrushConverter x:Key="TimeBackgroundBrushConverter" />
+        <converters:PathToFileNameConverter x:Key="PathToFileNameConverter" />
+        <converters:InverseBoolToVisibilityConverter x:Key="InverseBoolToVisibilityConverter" />
+        <converters:EmptyCollectionToVisibilityConverter x:Key="EmptyCollectionToVisibilityConverter" />
+    </Application.Resources>
+</Application>

@@ -1,0 +1,1152 @@
+<Window x:Class="AbyssusTimer.App.Windows.ConfiguratorWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:shell="clr-namespace:System.Windows.Shell;assembly=PresentationFramework"
+        xmlns:engine="clr-namespace:AbyssusTimer.App.Engine"
+        Title="Abyssplit"
+        Icon="/Assets/AppIcon.ico"
+        Width="480" SizeToContent="Height" MinHeight="300" MaxHeight="640"
+        Background="{StaticResource BackgroundBrush}"
+        WindowStyle="None">
+    <shell:WindowChrome.WindowChrome>
+        <shell:WindowChrome CaptionHeight="32" ResizeBorderThickness="6" CornerRadius="0" GlassFrameThickness="0" UseAeroCaptionButtons="False" />
+    </shell:WindowChrome.WindowChrome>
+    <Window.Resources>
+        <Style x:Key="SectionHeader" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource BrassBrush}" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="Margin" Value="0,20,0,8" />
+        </Style>
+        <Style x:Key="TimerCard" TargetType="Border">
+            <Setter Property="Background" Value="{StaticResource SurfaceBrush}" />
+            <Setter Property="BorderBrush" Value="{StaticResource HairlineBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="2" />
+            <Setter Property="Padding" Value="10,8" />
+            <Style.Triggers>
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter Property="Opacity" Value="0.5" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+        <Style x:Key="TimerLabel" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource TextMutedBrush}" />
+            <Setter Property="FontSize" Value="10" />
+            <Setter Property="HorizontalAlignment" Value="Center" />
+        </Style>
+        <Style x:Key="TimerValue" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+            <Setter Property="FontFamily" Value="Consolas" />
+            <Setter Property="FontSize" Value="20" />
+            <Setter Property="Margin" Value="0,4,0,0" />
+            <Setter Property="HorizontalAlignment" Value="Center" />
+        </Style>
+        <Style x:Key="ToggleRow" TargetType="Border">
+            <Setter Property="Background" Value="{StaticResource SurfaceBrush}" />
+            <Setter Property="BorderBrush" Value="{StaticResource HairlineBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="2" />
+            <Setter Property="Padding" Value="10,8" />
+            <Setter Property="Margin" Value="0,0,0,6" />
+        </Style>
+        <Style x:Key="CaptionButton" TargetType="Button">
+            <Setter Property="shell:WindowChrome.IsHitTestVisibleInChrome" Value="True" />
+            <Setter Property="Width" Value="44" />
+            <Setter Property="Height" Value="32" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Foreground" Value="{StaticResource TextMutedBrush}" />
+            <Setter Property="FontFamily" Value="Segoe UI" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bg" Background="{TemplateBinding Background}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bg" Property="Background" Value="{Binding Tag, RelativeSource={RelativeSource TemplatedParent}}" />
+                                <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="RoundScrollThumb" TargetType="Thumb">
+            <Setter Property="MinHeight" Value="30" />
+            <Setter Property="MaxHeight" Value="30" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Thumb">
+                        <Border Background="{StaticResource BrassLightBrush}" CornerRadius="2" Margin="1,0" />
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style TargetType="ScrollBar">
+            <Setter Property="Width" Value="5" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ScrollBar">
+                        <Track x:Name="PART_Track" IsDirectionReversed="True">
+                            <Track.DecreaseRepeatButton>
+                                <RepeatButton Command="ScrollBar.PageUpCommand" Opacity="0" Focusable="False" />
+                            </Track.DecreaseRepeatButton>
+                            <Track.IncreaseRepeatButton>
+                                <RepeatButton Command="ScrollBar.PageDownCommand" Opacity="0" Focusable="False" />
+                            </Track.IncreaseRepeatButton>
+                            <Track.Thumb>
+                                <Thumb Style="{StaticResource RoundScrollThumb}" />
+                            </Track.Thumb>
+                        </Track>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="ThemedButton" TargetType="Button">
+            <Setter Property="Background" Value="{StaticResource SurfaceBrush}" />
+            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+            <Setter Property="BorderBrush" Value="{StaticResource HairlineBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Padding" Value="14,8" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Bg" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="6">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="{TemplateBinding Padding}" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bg" Property="Background" Value="{StaticResource HoverSurfaceBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Bg" Property="Background" Value="{StaticResource PressedSurfaceBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.5" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="ThemedToggleButton" TargetType="ToggleButton">
+            <Setter Property="Background" Value="{StaticResource SurfaceBrush}" />
+            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+            <Setter Property="BorderBrush" Value="{StaticResource HairlineBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Padding" Value="14,8" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToggleButton">
+                        <Border x:Name="Bg" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="6">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="{TemplateBinding Padding}" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Bg" Property="Background" Value="{StaticResource HoverSurfaceBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Bg" Property="Background" Value="{StaticResource BrassBrush}" />
+                                <Setter TargetName="Bg" Property="BorderBrush" Value="{StaticResource BrassBrush}" />
+                                <Setter Property="Foreground" Value="{StaticResource SurfaceBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style TargetType="TabControl">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TabControl">
+                        <DockPanel Background="{TemplateBinding Background}">
+                            <TabPanel DockPanel.Dock="Top" IsItemsHost="True" Background="Transparent" Margin="20,12,20,0" />
+                            <ContentPresenter ContentSource="SelectedContent" />
+                        </DockPanel>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style TargetType="TabItem">
+            <Setter Property="Foreground" Value="{StaticResource TextMutedBrush}" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TabItem">
+                        <Border x:Name="Bg" Background="Transparent" BorderBrush="Transparent" BorderThickness="0,0,0,2"
+                                Padding="12,8" Margin="0,0,4,0">
+                            <ContentPresenter ContentSource="Header" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Bg" Property="BorderBrush" Value="{StaticResource BrassBrush}" />
+                                <Setter Property="Foreground" Value="{StaticResource BrassBrush}" />
+                                <Setter Property="FontWeight" Value="Bold" />
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style TargetType="Slider">
+            <Setter Property="Height" Value="20" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Slider">
+                        <Grid VerticalAlignment="Center">
+                            <Border Height="4" Background="{StaticResource HairlineBrush}" CornerRadius="2" />
+                            <Track x:Name="PART_Track">
+                                <Track.DecreaseRepeatButton>
+                                    <RepeatButton Command="Slider.DecreaseLarge">
+                                        <RepeatButton.Template>
+                                            <ControlTemplate TargetType="RepeatButton">
+                                                <Border Height="4" Background="{StaticResource BrassBrush}" CornerRadius="2" />
+                                            </ControlTemplate>
+                                        </RepeatButton.Template>
+                                    </RepeatButton>
+                                </Track.DecreaseRepeatButton>
+                                <Track.IncreaseRepeatButton>
+                                    <RepeatButton Command="Slider.IncreaseLarge" Opacity="0" Focusable="False" />
+                                </Track.IncreaseRepeatButton>
+                                <Track.Thumb>
+                                    <Thumb>
+                                        <Thumb.Template>
+                                            <ControlTemplate TargetType="Thumb">
+                                                <Ellipse Width="14" Height="14" Fill="{StaticResource TextPrimaryBrush}" />
+                                            </ControlTemplate>
+                                        </Thumb.Template>
+                                    </Thumb>
+                                </Track.Thumb>
+                            </Track>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="ColorSwatch" TargetType="Button">
+            <Setter Property="Width" Value="20" />
+            <Setter Property="Height" Value="20" />
+            <Setter Property="Margin" Value="0,0,6,0" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" BorderBrush="{StaticResource HairlineBrush}" BorderThickness="1" CornerRadius="4" />
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="ColorPickerSwatch" TargetType="Button">
+            <Setter Property="Width" Value="26" />
+            <Setter Property="Height" Value="20" />
+            <Setter Property="Margin" Value="4,0,0,0" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="ToolTip" Value="Custom color..." />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" BorderBrush="{StaticResource TextPrimaryBrush}" BorderThickness="1" CornerRadius="4" />
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="StatusBadge" TargetType="Border">
+            <Setter Property="CornerRadius" Value="10" />
+            <Setter Property="Padding" Value="8,3" />
+            <Setter Property="Margin" Value="0,0,6,0" />
+            <Setter Property="BorderThickness" Value="1" />
+        </Style>
+        <Style x:Key="StatusBadgeText" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="10" />
+            <Setter Property="FontWeight" Value="Bold" />
+        </Style>
+
+        <Style TargetType="CheckBox">
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="CheckBox">
+                        <Grid Width="40" Height="20">
+                            <Border x:Name="Track" CornerRadius="10" Background="{StaticResource TextDimBrush}" />
+                            <Grid x:Name="Knob" Width="16" Height="16" HorizontalAlignment="Left" Margin="2,0,0,0">
+                                <Ellipse Fill="{StaticResource TextPrimaryBrush}" />
+                                <Path x:Name="CheckGlyph" Data="M 3,8 L 6.5,11.5 L 13,4"
+                                      Stroke="#17211D" StrokeThickness="2"
+                                      StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"
+                                      Opacity="0" />
+                            </Grid>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Track" Property="Background" Value="{StaticResource BrassBrush}" />
+                                <Setter TargetName="Knob" Property="HorizontalAlignment" Value="Right" />
+                                <Setter TargetName="Knob" Property="Margin" Value="0,0,2,0" />
+                                <Setter TargetName="CheckGlyph" Property="Opacity" Value="1" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style TargetType="ComboBoxItem">
+            <Setter Property="Padding" Value="10,6" />
+            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBoxItem">
+                        <Border x:Name="Bg" Background="Transparent" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsHighlighted" Value="True">
+                                <Setter TargetName="Bg" Property="Background" Value="{StaticResource HoverSurfaceBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter Property="Foreground" Value="{StaticResource BrassBrush}" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style TargetType="ComboBox">
+            <Setter Property="Background" Value="{StaticResource SurfaceBrush}" />
+            <Setter Property="Foreground" Value="{StaticResource TextPrimaryBrush}" />
+            <Setter Property="BorderBrush" Value="{StaticResource HairlineBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBox">
+                        <Grid>
+                            <ToggleButton Focusable="False" ClickMode="Press"
+                                          IsChecked="{Binding IsDropDownOpen, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}">
+                                <ToggleButton.Template>
+                                    <ControlTemplate TargetType="ToggleButton">
+                                        <Border Background="{Binding Background, RelativeSource={RelativeSource AncestorType=ComboBox}}"
+                                                BorderBrush="{Binding BorderBrush, RelativeSource={RelativeSource AncestorType=ComboBox}}"
+                                                BorderThickness="{Binding BorderThickness, RelativeSource={RelativeSource AncestorType=ComboBox}}"
+                                                CornerRadius="4">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="20" />
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Grid.Column="1" Text="&#xE70D;" FontFamily="Segoe MDL2 Assets" FontSize="8"
+                                                           Foreground="{StaticResource TextMutedBrush}" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                            </Grid>
+                                        </Border>
+                                    </ControlTemplate>
+                                </ToggleButton.Template>
+                            </ToggleButton>
+                            <ContentPresenter IsHitTestVisible="False"
+                                              Content="{TemplateBinding SelectionBoxItem}"
+                                              ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
+                                              Margin="10,6,22,6" VerticalAlignment="Center" HorizontalAlignment="Left" />
+                            <Popup x:Name="PART_Popup" Placement="Bottom" IsOpen="{TemplateBinding IsDropDownOpen}"
+                                   AllowsTransparency="True" Focusable="False" PopupAnimation="None">
+                                <Border Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource HairlineBrush}" BorderThickness="1" CornerRadius="4"
+                                        MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource AncestorType=ComboBox}}"
+                                        Margin="0,2,0,0">
+                                    <ScrollViewer Margin="2" SnapsToDevicePixels="True" MaxHeight="240">
+                                        <StackPanel IsItemsHost="True" />
+                                    </ScrollViewer>
+                                </Border>
+                            </Popup>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.5" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <StackPanel Grid.Row="0" Margin="20,36,20,0">
+            <TextBlock>
+                <Run Text="ABYSSPLIT" FontSize="22" FontWeight="Bold" Foreground="{StaticResource BrassBrush}" />
+                <Run Text="{Binding AppVersionText, Mode=OneTime}" FontSize="11" Foreground="{StaticResource TextDimBrush}" BaselineAlignment="Center" />
+            </TextBlock>
+            <DockPanel Margin="0,4,0,0">
+                <ComboBox DockPanel.Dock="Right" VerticalAlignment="Center" MinWidth="70"
+                          ItemsSource="{Binding AllPlayerCounts}" SelectedItem="{Binding ActivePlayerCount, Mode=TwoWay}"
+                          IsEnabled="{Binding IsInRun, Converter={StaticResource InverseBoolConverter}}" />
+                <ComboBox DockPanel.Dock="Right" VerticalAlignment="Center" MinWidth="150" Margin="8,0,8,0"
+                          ItemsSource="{Binding AllCategories}" SelectedItem="{Binding ActiveCategory, Mode=TwoWay}"
+                          IsEnabled="{Binding IsInRun, Converter={StaticResource InverseBoolConverter}}">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding Converter={StaticResource RunCategoryToDisplayNameConverter}}" />
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                    <Border Style="{StaticResource StatusBadge}" Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource HairlineBrush}"
+                            Visibility="{Binding IsAttached, Converter={StaticResource InverseBoolToVisibilityConverter}}">
+                        <TextBlock Text="Waiting for Abyssus" Style="{StaticResource StatusBadgeText}" Foreground="{StaticResource TextDimBrush}" />
+                    </Border>
+                    <Border Style="{StaticResource StatusBadge}" Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource ToxicBrush}"
+                            Visibility="{Binding IsAttached, Converter={StaticResource BoolToVisibilityConverter}}">
+                        <TextBlock Text="Attached" Style="{StaticResource StatusBadgeText}" Foreground="{StaticResource ToxicBrush}" />
+                    </Border>
+                    <Border Style="{StaticResource StatusBadge}" Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource BrassBrush}"
+                            Visibility="{Binding IsInRun, Converter={StaticResource BoolToVisibilityConverter}}">
+                        <TextBlock Text="In Run" Style="{StaticResource StatusBadgeText}" Foreground="{StaticResource BrassBrush}" />
+                    </Border>
+                    <Border Style="{StaticResource StatusBadge}" Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource TextMutedBrush}"
+                            Visibility="{Binding IsLoading, Converter={StaticResource BoolToVisibilityConverter}}">
+                        <TextBlock Text="Loading" Style="{StaticResource StatusBadgeText}" Foreground="{StaticResource TextMutedBrush}" />
+                    </Border>
+                    <Border Style="{StaticResource StatusBadge}" Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource TealGlowBrush}"
+                            Visibility="{Binding IsCutscenePlaying, Converter={StaticResource BoolToVisibilityConverter}}">
+                        <TextBlock Text="Cutscene" Style="{StaticResource StatusBadgeText}" Foreground="{StaticResource TealGlowBrush}" />
+                    </Border>
+                    <Border Style="{StaticResource StatusBadge}" Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource WarningBrush}"
+                            Visibility="{Binding IsPaused, Converter={StaticResource BoolToVisibilityConverter}}">
+                        <TextBlock Text="Paused" Style="{StaticResource StatusBadgeText}" Foreground="{StaticResource WarningBrush}" />
+                    </Border>
+                </StackPanel>
+            </DockPanel>
+        </StackPanel>
+
+        <TabControl Grid.Row="1">
+            <TabItem Header="Main">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="20">
+                        <TextBlock Text="Timers — click to choose the overlay's primary timer" Style="{StaticResource SectionHeader}" Margin="0,0,0,8" />
+                        <StackPanel Orientation="Horizontal">
+                            <Border Style="{StaticResource TimerCard}" Cursor="Hand" Tag="Raw" MouseLeftButtonDown="TimerCard_Click"
+                                    Margin="0,0,8,0"
+                                    IsEnabled="{Binding IsInRun, Converter={StaticResource InverseBoolConverter}}"
+                                    Visibility="{Binding ShowRawTimer, Converter={StaticResource BoolToVisibilityConverter}}">
+                                <StackPanel>
+                                    <TextBlock Text="IGT" Style="{StaticResource TimerLabel}" />
+                                    <TextBlock Text="{Binding RawRunTimeText}" Style="{StaticResource TimerValue}"
+                                               Foreground="{Binding SelectedPrimaryTimer, Converter={StaticResource PrimaryTimerToBrushConverter}, ConverterParameter=Raw}" />
+                                </StackPanel>
+                            </Border>
+                            <Border Style="{StaticResource TimerCard}" Cursor="Hand" Tag="LoadFree" MouseLeftButtonDown="TimerCard_Click"
+                                    Margin="0,0,8,0"
+                                    IsEnabled="{Binding IsInRun, Converter={StaticResource InverseBoolConverter}}"
+                                    Visibility="{Binding ShowLoadFreeTimer, Converter={StaticResource BoolToVisibilityConverter}}">
+                                <StackPanel>
+                                    <TextBlock Text="LOAD-FREE" Style="{StaticResource TimerLabel}" />
+                                    <TextBlock Text="{Binding LoadFreeTimeText}" Style="{StaticResource TimerValue}"
+                                               Foreground="{Binding SelectedPrimaryTimer, Converter={StaticResource PrimaryTimerToBrushConverter}, ConverterParameter=LoadFree}" />
+                                </StackPanel>
+                            </Border>
+                            <Border Style="{StaticResource TimerCard}" Cursor="Hand" Tag="LoadCutsceneFree" MouseLeftButtonDown="TimerCard_Click"
+                                    IsEnabled="{Binding IsInRun, Converter={StaticResource InverseBoolConverter}}"
+                                    Visibility="{Binding ShowLoadCutsceneFreeTimer, Converter={StaticResource BoolToVisibilityConverter}}">
+                                <StackPanel>
+                                    <TextBlock Text="LOAD+CUTSCENE-FREE" Style="{StaticResource TimerLabel}" />
+                                    <TextBlock Text="{Binding LoadCutsceneFreeTimeText}" Style="{StaticResource TimerValue}"
+                                               Foreground="{Binding SelectedPrimaryTimer, Converter={StaticResource PrimaryTimerToBrushConverter}, ConverterParameter=LoadCutsceneFree}" />
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+
+                        <TextBlock Text="Splits · Personal Best" Style="{StaticResource SectionHeader}" />
+                        <ItemsControl ItemsSource="{Binding SplitGroups}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="{x:Type engine:BiomeGroupViewModel}">
+                                    <StackPanel Margin="0,8,0,0">
+                                        <Border BorderBrush="{StaticResource HairlineBrush}" BorderThickness="0,0,0,1" Padding="2,4">
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Grid.Column="0" Text="{Binding BiomeName}" Foreground="{StaticResource BrassBrush}" FontWeight="Bold" FontSize="13" />
+                                                <TextBlock Grid.Column="1" Text="{Binding TotalTimeText}" Foreground="{StaticResource BrassBrush}" FontFamily="Consolas" FontWeight="Bold" FontSize="13" />
+                                            </Grid>
+                                        </Border>
+                                        <ItemsControl ItemsSource="{Binding Depths}" Margin="12,4,0,0">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate DataType="{x:Type engine:DepthRowViewModel}">
+                                                    <StackPanel>
+                                                        <Grid Margin="0,2">
+                                                            <Grid.ColumnDefinitions>
+                                                                <ColumnDefinition Width="*" />
+                                                                <ColumnDefinition Width="Auto" />
+                                                                <ColumnDefinition Width="Auto" />
+                                                                <ColumnDefinition Width="Auto" />
+                                                            </Grid.ColumnDefinitions>
+                                                            <TextBlock Grid.Column="0" Text="{Binding Label}" Foreground="{StaticResource TextPrimaryBrush}" FontSize="12" />
+                                                            <TextBlock Grid.Column="1" Text="{Binding DeltaText}"
+                                                                       Foreground="{Binding DeltaSeverity, Converter={StaticResource DeltaSeverityToBrushConverter}}"
+                                                                       FontFamily="Consolas" FontSize="11" Margin="0,0,10,0"
+                                                                       Visibility="{Binding DeltaText, Converter={StaticResource NullToVisibilityConverter}, FallbackValue=Collapsed}" />
+                                                            <TextBlock Grid.Column="2" Text="{Binding TimeText}" Foreground="{StaticResource TextPrimaryBrush}" FontFamily="Consolas" FontSize="12" Margin="0,0,10,0" />
+                                                            <TextBlock Grid.Column="3" Text="{Binding StatusText}" Foreground="{StaticResource ToxicBrush}" FontSize="11" />
+                                                        </Grid>
+                                                        <ItemsControl ItemsSource="{Binding Rooms}" Margin="16,0,0,4">
+                                                            <ItemsControl.ItemTemplate>
+                                                                <DataTemplate DataType="{x:Type engine:RoomRowViewModel}">
+                                                                    <Grid Margin="0,1">
+                                                                        <Grid.ColumnDefinitions>
+                                                                            <ColumnDefinition Width="*" />
+                                                                            <ColumnDefinition Width="Auto" />
+                                                                        </Grid.ColumnDefinitions>
+                                                                        <TextBlock Grid.Column="0" Text="{Binding Label}" Foreground="{StaticResource TextMutedBrush}" FontSize="11" />
+                                                                        <TextBlock Grid.Column="1" Text="{Binding TimeText}" Foreground="{StaticResource TextMutedBrush}" FontFamily="Consolas" FontSize="11" />
+                                                                    </Grid>
+                                                                </DataTemplate>
+                                                            </ItemsControl.ItemTemplate>
+                                                        </ItemsControl>
+                                                    </StackPanel>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <TextBlock Foreground="{StaticResource TextDimBrush}" FontStyle="Italic" FontSize="11" Margin="0,10,0,0">
+                            <Run Text="Best full-run time: " />
+                            <Run Text="{Binding BestRunTimeText, Mode=OneWay}" />
+                        </TextBlock>
+                        <TextBlock Foreground="{StaticResource TextDimBrush}" FontStyle="Italic" FontSize="11" Margin="0,2,0,0">
+                            <Run Text="Sum of Best: " />
+                            <Run Text="{Binding SumOfBestText, Mode=OneWay}" />
+                        </TextBlock>
+                        <TextBlock Text="{Binding SessionStatsText, Mode=OneWay}"
+                                   Foreground="{StaticResource TextDimBrush}" FontStyle="Italic" FontSize="11" Margin="0,2,0,0" />
+                        <StackPanel Visibility="{Binding ShowPreviousSegment, Converter={StaticResource BoolToVisibilityConverter}}">
+                            <TextBlock Foreground="{StaticResource TextDimBrush}" FontStyle="Italic" FontSize="11" Margin="0,2,0,0"
+                                       Visibility="{Binding PreviousRunTimeText, Converter={StaticResource NullToVisibilityConverter}, FallbackValue=Collapsed}">
+                                <Run Text="Previous run: " />
+                                <Run Text="{Binding PreviousRunTimeText, Mode=OneWay}" />
+                            </TextBlock>
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Margin="0,20,0,0">
+                            <Button Content="Reset Run" Style="{StaticResource ThemedButton}" Margin="0,0,8,0" Click="ResetRun_Click"
+                                    IsEnabled="{Binding IsInRun, Converter={StaticResource InverseBoolConverter}}" />
+                        </StackPanel>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+
+            <TabItem Header="History">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="20">
+                        <TextBlock Text="Attempt History" Style="{StaticResource SectionHeader}" Margin="0,0,0,8" />
+                        <ItemsControl ItemsSource="{Binding AllHistoricalRuns}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="{x:Type engine:HistoricalRunOption}">
+                                    <Border Style="{StaticResource ToggleRow}" Cursor="Hand" Tag="{Binding Index}"
+                                            MouseLeftButtonDown="HistoryRow_Click">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Grid.Column="0" Text="{Binding Label}" Foreground="{StaticResource TextPrimaryBrush}" FontSize="12"
+                                                       VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="0,0,8,0" />
+                                            <Button Grid.Column="1" Content="Compare"
+                                                    Padding="8,4" FontSize="10" Margin="0,0,6,0"
+                                                    Tag="{Binding Index}" Click="HistoryRowCompare_Click">
+                                                <Button.Style>
+                                                    <Style TargetType="Button" BasedOn="{StaticResource ThemedButton}">
+                                                        <Style.Triggers>
+                                                            <DataTrigger Value="True">
+                                                                <DataTrigger.Binding>
+                                                                    <MultiBinding Converter="{StaticResource IndicesEqualConverter}">
+                                                                        <Binding Path="DataContext.ActiveSpecificRunIndex"
+                                                                                 RelativeSource="{RelativeSource AncestorType=ItemsControl}" />
+                                                                        <Binding Path="Index" />
+                                                                    </MultiBinding>
+                                                                </DataTrigger.Binding>
+                                                                <Setter Property="Background" Value="{StaticResource BrassBrush}" />
+                                                                <Setter Property="BorderBrush" Value="{StaticResource BrassBrush}" />
+                                                                <Setter Property="Foreground" Value="{StaticResource SurfaceBrush}" />
+                                                                <Setter Property="FontWeight" Value="Bold" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </Button.Style>
+                                            </Button>
+                                            <Button Grid.Column="2" Content="Share" Style="{StaticResource ThemedButton}"
+                                                    Padding="8,4" FontSize="10" Margin="0,0,6,0"
+                                                    Tag="{Binding Index}" Click="HistoryRowShare_Click" />
+                                            <Button Grid.Column="3" Content="Delete" Style="{StaticResource ThemedButton}"
+                                                    Padding="8,4" FontSize="10"
+                                                    BorderBrush="{StaticResource DangerBrush}" Foreground="{StaticResource DangerTextBrush}"
+                                                    Tag="{Binding Index}" Click="HistoryRowDelete_Click" />
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <TextBlock Text="Details" Style="{StaticResource SectionHeader}" />
+                        <TextBlock Text="{Binding SelectedRunHistoryDetailSummary}" Foreground="{StaticResource BrassBrush}" FontWeight="Bold" FontSize="12"
+                                   Visibility="{Binding SelectedRunHistoryDetailSummary, Converter={StaticResource NullToVisibilityConverter}, FallbackValue=Collapsed}" />
+                        <ItemsControl ItemsSource="{Binding SelectedRunHistoryDetailRows}" Margin="0,6,0,0">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="{x:Type engine:RunHistoryDetailRow}">
+                                    <Grid Margin="0,2">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="{Binding Label}" Foreground="{StaticResource TextPrimaryBrush}" FontSize="12" />
+                                        <TextBlock Grid.Column="1" Text="{Binding TimeText}" Foreground="{StaticResource TextPrimaryBrush}" FontFamily="Consolas" FontSize="12" />
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+
+            <TabItem Header="Stats">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="20" Grid.IsSharedSizeScope="True">
+                        <TextBlock Text="Per-Location Stats" Style="{StaticResource SectionHeader}" Margin="0,0,0,4" />
+                        <TextBlock Text="Best/average/worst segment time at each location, across every attempt that actually cleared it. Consistency (σ) is lower for a steadier time, higher for a wider spread."
+                                   Foreground="{StaticResource TextDimBrush}" FontStyle="Italic" FontSize="10" TextWrapping="Wrap" Margin="0,0,0,8" />
+                        <TextBlock Text="No completed segments recorded yet for this category." Foreground="{StaticResource TextDimBrush}" FontStyle="Italic" FontSize="11"
+                                   Visibility="{Binding StatsPerLocationRows, Converter={StaticResource EmptyCollectionToVisibilityConverter}}" />
+                        <Grid Margin="0,0,0,4">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" SharedSizeGroup="PLLocation" />
+                                <ColumnDefinition Width="Auto" SharedSizeGroup="PLAttempts" MinWidth="20" />
+                                <ColumnDefinition Width="Auto" SharedSizeGroup="PLBest" MinWidth="20" />
+                                <ColumnDefinition Width="Auto" SharedSizeGroup="PLAvg" MinWidth="20" />
+                                <ColumnDefinition Width="Auto" SharedSizeGroup="PLWorst" MinWidth="20" />
+                                <ColumnDefinition Width="Auto" SharedSizeGroup="PLStdDev" MinWidth="20" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="Location" Foreground="{StaticResource TextDimBrush}" FontSize="10" FontWeight="Bold" Margin="0,0,16,0" />
+                            <TextBlock Grid.Column="1" Text="Attempts" Foreground="{StaticResource TextDimBrush}" FontSize="10" FontWeight="Bold" HorizontalAlignment="Right" Margin="0,0,14,0" />
+                            <TextBlock Grid.Column="2" Text="Best" Foreground="{StaticResource TextDimBrush}" FontSize="10" FontWeight="Bold" HorizontalAlignment="Right" Margin="0,0,14,0" />
+                            <TextBlock Grid.Column="3" Text="Avg" Foreground="{StaticResource TextDimBrush}" FontSize="10" FontWeight="Bold" HorizontalAlignment="Right" Margin="0,0,14,0" />
+                            <TextBlock Grid.Column="4" Text="Worst" Foreground="{StaticResource TextDimBrush}" FontSize="10" FontWeight="Bold" HorizontalAlignment="Right" Margin="0,0,14,0" />
+                            <TextBlock Grid.Column="5" Text="σ" Foreground="{StaticResource TextDimBrush}" FontSize="10" FontWeight="Bold" HorizontalAlignment="Right"
+                                       ToolTip="Consistency (standard deviation) across every cleared attempt at this location" />
+                        </Grid>
+                        <ItemsControl ItemsSource="{Binding StatsPerLocationRows}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="{x:Type engine:LocationStatsRow}">
+                                    <Grid Margin="0,4">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" SharedSizeGroup="PLLocation" />
+                                            <ColumnDefinition Width="Auto" SharedSizeGroup="PLAttempts" MinWidth="20" />
+                                            <ColumnDefinition Width="Auto" SharedSizeGroup="PLBest" MinWidth="20" />
+                                            <ColumnDefinition Width="Auto" SharedSizeGroup="PLAvg" MinWidth="20" />
+                                            <ColumnDefinition Width="Auto" SharedSizeGroup="PLWorst" MinWidth="20" />
+                                            <ColumnDefinition Width="Auto" SharedSizeGroup="PLStdDev" MinWidth="20" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="{Binding Label}" Foreground="{StaticResource TextPrimaryBrush}" FontSize="12" Margin="0,0,16,0" />
+                                        <TextBlock Grid.Column="1" Text="{Binding Attempts}" Foreground="{StaticResource TextMutedBrush}" FontFamily="Consolas" FontSize="11" HorizontalAlignment="Right" Margin="0,0,14,0" />
+                                        <TextBlock Grid.Column="2" Text="{Binding BestText}" Foreground="{StaticResource ToxicBrush}" FontFamily="Consolas" FontSize="11" HorizontalAlignment="Right" Margin="0,0,14,0" />
+                                        <TextBlock Grid.Column="3" Text="{Binding AverageText}" Foreground="{StaticResource TextPrimaryBrush}" FontFamily="Consolas" FontSize="11" HorizontalAlignment="Right" Margin="0,0,14,0" />
+                                        <TextBlock Grid.Column="4" Text="{Binding WorstText}" Foreground="{StaticResource DangerTextBrush}" FontFamily="Consolas" FontSize="11" HorizontalAlignment="Right" Margin="0,0,14,0" />
+                                        <TextBlock Grid.Column="5" Text="{Binding ConsistencyText}" Foreground="{StaticResource TextMutedBrush}" FontFamily="Consolas" FontSize="11" HorizontalAlignment="Right" />
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <TextBlock Text="PB Progression" Style="{StaticResource SectionHeader}" Margin="0,20,0,4" />
+                        <TextBlock Text="Every point your full-run PB improved, oldest first." Foreground="{StaticResource TextDimBrush}" FontStyle="Italic" FontSize="10" TextWrapping="Wrap" Margin="0,0,0,8" />
+                        <TextBlock Text="No completed runs recorded yet for this category." Foreground="{StaticResource TextDimBrush}" FontStyle="Italic" FontSize="11"
+                                   Visibility="{Binding StatsPbProgressionRows, Converter={StaticResource EmptyCollectionToVisibilityConverter}}" />
+                        <ItemsControl ItemsSource="{Binding StatsPbProgressionRows}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="{x:Type engine:PbMilestoneRow}">
+                                    <Grid Margin="0,4">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" SharedSizeGroup="PBDate" />
+                                            <ColumnDefinition Width="Auto" SharedSizeGroup="PBTime" MinWidth="20" />
+                                            <ColumnDefinition Width="Auto" SharedSizeGroup="PBImprovement" MinWidth="20" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="{Binding DateText}" Foreground="{StaticResource TextMutedBrush}" FontSize="11" VerticalAlignment="Center" Margin="0,0,16,0" />
+                                        <TextBlock Grid.Column="1" Text="{Binding TimeText}" Foreground="{StaticResource ToxicBrush}" FontFamily="Consolas" FontWeight="Bold" FontSize="12" HorizontalAlignment="Right" Margin="0,0,16,0" VerticalAlignment="Center" />
+                                        <TextBlock Grid.Column="2" Text="{Binding ImprovementText}" Foreground="{StaticResource TextDimBrush}" FontFamily="Consolas" FontSize="11" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <TextBlock Text="Attempts Reached" Style="{StaticResource SectionHeader}" Margin="0,20,0,4" />
+                        <TextBlock Text="How far attempts typically get before ending — a practice signal for where runs tend to stop, without needing death-cause detail."
+                                   Foreground="{StaticResource TextDimBrush}" FontStyle="Italic" FontSize="10" TextWrapping="Wrap" Margin="0,0,0,8" />
+                        <TextBlock Text="No attempts recorded yet for this category." Foreground="{StaticResource TextDimBrush}" FontStyle="Italic" FontSize="11"
+                                   Visibility="{Binding StatsAttemptsReachedRows, Converter={StaticResource EmptyCollectionToVisibilityConverter}}" />
+                        <ItemsControl ItemsSource="{Binding StatsAttemptsReachedRows}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="{x:Type engine:AttemptsReachedRow}">
+                                    <Grid Margin="0,4">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" SharedSizeGroup="ARLocation" />
+                                            <ColumnDefinition Width="Auto" SharedSizeGroup="AREnded" MinWidth="20" />
+                                            <ColumnDefinition Width="Auto" SharedSizeGroup="ARFinished" MinWidth="20" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="{Binding Label}" Foreground="{StaticResource TextPrimaryBrush}" FontSize="12" Margin="0,0,16,0" />
+                                        <TextBlock Grid.Column="1" Text="{Binding TotalCount, StringFormat={}{0} ended here}" Foreground="{StaticResource TextPrimaryBrush}" FontFamily="Consolas" FontSize="11" HorizontalAlignment="Right" Margin="0,0,16,0" />
+                                        <TextBlock Grid.Column="2" Text="{Binding CompletedCount, StringFormat={}{0} finished}" Foreground="{StaticResource ToxicBrush}" FontFamily="Consolas" FontSize="11" HorizontalAlignment="Right" />
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <TextBlock Text="Load &amp; Cutscene Overhead" Style="{StaticResource SectionHeader}" Margin="0,20,0,4" />
+                        <TextBlock Text="Total time spent loading or in cutscenes, across every attempt with the data to compute it."
+                                   Foreground="{StaticResource TextDimBrush}" FontStyle="Italic" FontSize="10" TextWrapping="Wrap" Margin="0,0,0,8" />
+                        <TextBlock Text="{Binding StatsLoadCutsceneOverheadText}" Foreground="{StaticResource TextPrimaryBrush}" FontSize="12" TextWrapping="Wrap" />
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+
+            <TabItem Header="Settings">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="20">
+                        <TextBlock Text="Session Behavior" Style="{StaticResource SectionHeader}" Margin="0,0,0,8" />
+                        <Border Style="{StaticResource ToggleRow}">
+                            <DockPanel>
+                                <CheckBox DockPanel.Dock="Right" IsChecked="{Binding PauseStopsTime, Mode=TwoWay}" VerticalAlignment="Center" />
+                                <StackPanel>
+                                    <TextBlock Text="Pause Stops Time" Foreground="{StaticResource TextPrimaryBrush}" FontSize="12" />
+                                    <TextBlock Text="Off by default — alt-tab won't freeze the adjusted timers" Foreground="{StaticResource TextDimBrush}" FontStyle="Italic" FontSize="10" />
+                                    <TextBlock Text="Enabling this will make times ineligible for leaderboard submission unless the ruleset explicitly allows pausing."
+                                               Foreground="{StaticResource WarningBrush}" FontStyle="Italic" FontSize="10" TextWrapping="Wrap" Margin="0,2,0,0" />
+                                </StackPanel>
+                            </DockPanel>
+                        </Border>
+                        <Border Style="{StaticResource ToggleRow}">
+                            <DockPanel>
+                                <CheckBox DockPanel.Dock="Right" IsChecked="{Binding AutoResetOnLobbyReturn, Mode=TwoWay}" VerticalAlignment="Center" />
+                                <StackPanel>
+                                    <TextBlock Text="Auto-Reset on Lobby Return" Foreground="{StaticResource TextPrimaryBrush}" FontSize="12" />
+                                    <TextBlock Text="On by default — timers reset the moment you're back in the lobby" Foreground="{StaticResource TextDimBrush}" FontStyle="Italic" FontSize="10" />
+                                </StackPanel>
+                            </DockPanel>
+                        </Border>
+                        <Border Style="{StaticResource ToggleRow}">
+                            <DockPanel>
+                                <CheckBox x:Name="SoftwareRenderingCheckBox" DockPanel.Dock="Right" Checked="SoftwareRendering_Changed" Unchecked="SoftwareRendering_Changed" VerticalAlignment="Center" />
+                                <StackPanel>
+                                    <TextBlock Text="Software Rendering" Foreground="{StaticResource TextPrimaryBrush}" FontSize="12" />
+                                    <TextBlock Text="On by default — avoids overlay freezes when the game is GPU-bound; turn off only if your bottleneck is CPU instead. Requires restart." Foreground="{StaticResource TextDimBrush}" FontStyle="Italic" FontSize="10" />
+                                </StackPanel>
+                            </DockPanel>
+                        </Border>
+                        <Border Style="{StaticResource ToggleRow}">
+                            <DockPanel>
+                                <CheckBox DockPanel.Dock="Right" IsChecked="{Binding RunAtStartup, Mode=TwoWay}" VerticalAlignment="Center" />
+                                <StackPanel>
+                                    <TextBlock Text="Run at Startup" Foreground="{StaticResource TextPrimaryBrush}" FontSize="12" />
+                                    <TextBlock Text="Off by default — launches Abyssplit (minimized to the tray) when you sign in to Windows." Foreground="{StaticResource TextDimBrush}" FontStyle="Italic" FontSize="10" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </DockPanel>
+                        </Border>
+
+                        <TextBlock Text="Display" Style="{StaticResource SectionHeader}" />
+                        <Border Style="{StaticResource ToggleRow}">
+                            <DockPanel>
+                                <CheckBox DockPanel.Dock="Right" IsChecked="{Binding ShowRawTimer, Mode=TwoWay}" VerticalAlignment="Center" />
+                                <TextBlock Text="IGT Timer Card" Foreground="{StaticResource TextPrimaryBrush}" FontSize="12" VerticalAlignment="Center" />
+                            </DockPanel>
+                        </Border>
+                        <Border Style="{StaticResource ToggleRow}">
+                            <DockPanel>
+                                <CheckBox DockPanel.Dock="Right" IsChecked="{Binding ShowLoadFreeTimer, Mode=TwoWay}" VerticalAlignment="Center" />
+                                <TextBlock Text="Load-Free Timer Card" Foreground="{StaticResource TextPrimaryBrush}" FontSize="12" VerticalAlignment="Center" />
+                            </DockPanel>
+                        </Border>
+                        <Border Style="{StaticResource ToggleRow}">
+                            <DockPanel>
+                                <CheckBox DockPanel.Dock="Right" IsChecked="{Binding ShowLoadCutsceneFreeTimer, Mode=TwoWay}" VerticalAlignment="Center" />
+                                <TextBlock Text="Load+Cutscene-Free Timer Card" Foreground="{StaticResource TextPrimaryBrush}" FontSize="12" VerticalAlignment="Center" />
+                            </DockPanel>
+                        </Border>
+                        <Border Style="{StaticResource ToggleRow}">
+                            <DockPanel>
+                                <CheckBox DockPanel.Dock="Right" IsChecked="{Binding ShowPreviousSegment, Mode=TwoWay}" VerticalAlignment="Center" />
+                                <StackPanel>
+                                    <TextBlock Text="Previous Segment" Foreground="{StaticResource TextPrimaryBrush}" FontSize="12" />
+                                    <TextBlock Text="Controls both the overlay's Prev. Run row and the line below the splits list" Foreground="{StaticResource TextDimBrush}" FontStyle="Italic" FontSize="10" />
+                                </StackPanel>
+                            </DockPanel>
+                        </Border>
+
+                        <TextBlock Text="History Storage" Style="{StaticResource SectionHeader}" />
+                        <Border Style="{StaticResource ToggleRow}">
+                            <DockPanel>
+                                <CheckBox DockPanel.Dock="Right" IsChecked="{Binding AutoDeleteRunHistory, Mode=TwoWay}" VerticalAlignment="Center" />
+                                <StackPanel>
+                                    <TextBlock Text="Auto-Delete Old Runs" Foreground="{StaticResource TextPrimaryBrush}" FontSize="12" />
+                                    <TextBlock Text="On by default — keeps run history from growing forever. Your PB run is never deleted. Turn off to keep every attempt permanently." Foreground="{StaticResource TextDimBrush}" FontStyle="Italic" FontSize="10" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </DockPanel>
+                        </Border>
+                        <Border Style="{StaticResource ToggleRow}"
+                                Visibility="{Binding AutoDeleteRunHistory, Converter={StaticResource BoolToVisibilityConverter}}">
+                            <DockPanel>
+                                <ComboBox DockPanel.Dock="Right" MinWidth="70" VerticalAlignment="Center"
+                                          ItemsSource="{Binding AllRunHistoryLimits}" SelectedItem="{Binding RunHistoryLimit, Mode=TwoWay}" />
+                                <StackPanel>
+                                    <TextBlock Text="Keep Up To" Foreground="{StaticResource TextPrimaryBrush}" FontSize="12" />
+                                    <TextBlock Text="Per category and player count — practicing Any% doesn't trim your All Bosses history." Foreground="{StaticResource TextDimBrush}" FontStyle="Italic" FontSize="10" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </DockPanel>
+                        </Border>
+                        <Border Style="{StaticResource ToggleRow}"
+                                Visibility="{Binding AutoDeleteRunHistory, Converter={StaticResource BoolToVisibilityConverter}}">
+                            <DockPanel>
+                                <ComboBox DockPanel.Dock="Right" MinWidth="90" VerticalAlignment="Center"
+                                          ItemsSource="{Binding AllRunHistoryTrimStrategies}" SelectedItem="{Binding RunHistoryTrimStrategy, Mode=TwoWay}" />
+                                <StackPanel>
+                                    <TextBlock Text="Delete" Foreground="{StaticResource TextPrimaryBrush}" FontSize="12" />
+                                    <TextBlock Text="Oldest: removes your earliest attempts first. Slowest: removes your worst times first, keeping recent history." Foreground="{StaticResource TextDimBrush}" FontStyle="Italic" FontSize="10" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </DockPanel>
+                        </Border>
+
+                        <TextBlock Text="Personal Best" Style="{StaticResource SectionHeader}" />
+                        <Border Style="{StaticResource ToggleRow}"
+                                Visibility="{Binding HasBestRunTime, Converter={StaticResource BoolToVisibilityConverter}}">
+                            <DockPanel>
+                                <Button DockPanel.Dock="Right" Content="Delete PB" Style="{StaticResource ThemedButton}"
+                                        Padding="8,3" FontSize="10" VerticalAlignment="Center"
+                                        BorderBrush="{StaticResource DangerBrush}" Foreground="{StaticResource DangerTextBrush}"
+                                        IsEnabled="{Binding IsInRun, Converter={StaticResource InverseBoolConverter}}"
+                                        Click="DeletePersonalBest_Click" />
+                                <StackPanel>
+                                    <TextBlock Text="Delete Recorded PB" Foreground="{StaticResource TextPrimaryBrush}" FontSize="12" />
+                                    <TextBlock Text="If a bug ever records an impossible time, delete it here to revert to your next-fastest completed run." Foreground="{StaticResource TextDimBrush}" FontStyle="Italic" FontSize="10" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </DockPanel>
+                        </Border>
+
+                        <TextBlock Text="Split Comparison" Style="{StaticResource SectionHeader}" />
+                        <Border Style="{StaticResource ToggleRow}">
+                            <DockPanel>
+                                <ComboBox DockPanel.Dock="Right" MinWidth="110" VerticalAlignment="Center"
+                                          ItemsSource="{Binding AllComparisonSources}" SelectedItem="{Binding ComparisonSource, Mode=TwoWay}">
+                                    <ComboBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding Converter={StaticResource ComparisonSourceToDisplayNameConverter}}" />
+                                        </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
+                                <StackPanel>
+                                    <TextBlock Text="Compare Splits Against" Foreground="{StaticResource TextPrimaryBrush}" FontSize="12" />
+                                    <TextBlock Text="Best: your all-time best per floor. Previous: your immediately prior attempt. Specific Run: set below." Foreground="{StaticResource TextDimBrush}" FontStyle="Italic" FontSize="10" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </DockPanel>
+                        </Border>
+                        <Border Style="{StaticResource ToggleRow}"
+                                Visibility="{Binding ComparisonSource, Converter={StaticResource ComparisonSourceToVisibilityConverter}, ConverterParameter=SpecificRun}">
+                            <DockPanel>
+                                <ComboBox DockPanel.Dock="Right" MinWidth="220" MaxWidth="220" VerticalAlignment="Center"
+                                          ItemsSource="{Binding AllHistoricalRuns}"
+                                          SelectedValuePath="Index"
+                                          SelectedValue="{Binding SelectedHistoricalRunIndex, Mode=TwoWay}">
+                                    <ComboBox.ItemTemplate>
+                                        <DataTemplate DataType="{x:Type engine:HistoricalRunOption}">
+                                            <TextBlock Text="{Binding Label}" TextTrimming="CharacterEllipsis" />
+                                        </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
+                                <StackPanel>
+                                    <TextBlock Text="Specific Run to Compare Against" Foreground="{StaticResource TextPrimaryBrush}" FontSize="12" TextWrapping="Wrap" />
+                                    <TextBlock Text="Only used when Split Comparison above is set to Specific Run" Foreground="{StaticResource TextDimBrush}" FontStyle="Italic" FontSize="10" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </DockPanel>
+                        </Border>
+
+                        <Border Style="{StaticResource ToggleRow}">
+                            <DockPanel>
+                                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                                    <Button Content="Browse..." Style="{StaticResource ThemedButton}" Padding="10,4" FontSize="11" Click="BrowseImportSplitFile_Click" />
+                                    <Button Content="Clear" Style="{StaticResource ThemedButton}" Padding="10,4" FontSize="11" Margin="6,0,0,0"
+                                            Click="ClearImportSplitFile_Click"
+                                            Visibility="{Binding HasImportedSplitFile, Converter={StaticResource BoolToVisibilityConverter}}" />
+                                </StackPanel>
+                                <StackPanel>
+                                    <TextBlock Text="Import Split File" Foreground="{StaticResource TextPrimaryBrush}" FontSize="12" />
+                                    <TextBlock Text="Load a .abysplit file someone shared with you to race against it — sets Split Comparison above to Imported File."
+                                               Foreground="{StaticResource TextDimBrush}" FontStyle="Italic" FontSize="10" TextWrapping="Wrap" />
+                                    <TextBlock Text="{Binding ImportedSplitDisplayText}" Foreground="{StaticResource ToxicBrush}" FontSize="11" Margin="0,4,0,0" TextWrapping="Wrap"
+                                               Visibility="{Binding HasImportedSplitFile, Converter={StaticResource BoolToVisibilityConverter}}" />
+                                </StackPanel>
+                            </DockPanel>
+                        </Border>
+
+                        <TextBlock Text="Support" Style="{StaticResource SectionHeader}" />
+                        <Border Style="{StaticResource ToggleRow}">
+                            <DockPanel>
+                                <Button DockPanel.Dock="Right" Content="Report an Issue" Style="{StaticResource ThemedButton}"
+                                        Padding="10,4" FontSize="11" VerticalAlignment="Center"
+                                        Click="ReportIssue_Click" />
+                                <StackPanel>
+                                    <TextBlock Text="Report a Bug" Foreground="{StaticResource TextPrimaryBrush}" FontSize="12" />
+                                    <TextBlock Text="Opens a GitHub issue with a recent log excerpt attached and reveals today's full log file in case more detail is needed." Foreground="{StaticResource TextDimBrush}" FontStyle="Italic" FontSize="10" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </DockPanel>
+                        </Border>
+                        <Border Style="{StaticResource ToggleRow}">
+                            <DockPanel>
+                                <Button DockPanel.Dock="Right" Content="About" Style="{StaticResource ThemedButton}"
+                                        Padding="10,4" FontSize="11" VerticalAlignment="Center"
+                                        Click="About_Click" />
+                                <TextBlock Text="About Abyssplit" Foreground="{StaticResource TextPrimaryBrush}" FontSize="12" VerticalAlignment="Center" />
+                            </DockPanel>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+
+            <TabItem Header="Overlay">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="20">
+                        <StackPanel Orientation="Horizontal">
+                            <ToggleButton x:Name="EditOverlayToggle"
+                                          Content="Edit Overlay Layout"
+                                          Style="{StaticResource ThemedToggleButton}"
+                                          HorizontalAlignment="Left"
+                                          Click="EditOverlayToggle_Click" />
+                            <ToggleButton Content="Preview"
+                                          Style="{StaticResource ThemedToggleButton}"
+                                          HorizontalAlignment="Left" Margin="8,0,0,0"
+                                          IsChecked="{Binding IsPreviewingOverlay, Mode=TwoWay}" />
+                        </StackPanel>
+                        <TextBlock Text="Edit Overlay Layout: toggle on to drag the overlay into position; toggle off to return it to click-through. Preview: shows sample split data so you can see appearance changes without being in a run — also unlocks the settings below."
+                                   Foreground="{StaticResource TextDimBrush}" FontStyle="Italic" FontSize="11" TextWrapping="Wrap" Margin="0,6,0,0" />
+
+                        <StackPanel IsEnabled="{Binding IsPreviewingOverlay}">
+                            <StackPanel.Style>
+                                <Style TargetType="StackPanel">
+                                    <Style.Triggers>
+                                        <Trigger Property="IsEnabled" Value="False">
+                                            <Setter Property="Opacity" Value="0.5" />
+                                        </Trigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </StackPanel.Style>
+
+                        <TextBlock Text="Overlay Appearance" Style="{StaticResource SectionHeader}" />
+                        <Border Style="{StaticResource ToggleRow}">
+                            <StackPanel>
+                                <DockPanel>
+                                    <TextBlock DockPanel.Dock="Right" Text="{Binding OverlayOpacity, StringFormat={}{0:P0}}"
+                                               Foreground="{StaticResource TextPrimaryBrush}" FontFamily="Consolas" FontSize="12" VerticalAlignment="Center" Margin="10,0,0,0" />
+                                    <TextBlock Text="Background Opacity" Foreground="{StaticResource TextPrimaryBrush}" FontSize="12" VerticalAlignment="Center" />
+                                </DockPanel>
+                                <Slider Minimum="0" Maximum="1" Value="{Binding OverlayOpacity, Mode=TwoWay}" Margin="0,8,0,0" />
+                            </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource ToggleRow}">
+                            <StackPanel>
+                                <DockPanel>
+                                    <TextBlock DockPanel.Dock="Right" Text="{Binding OverlayScale, StringFormat={}{0:P0}}"
+                                               Foreground="{StaticResource TextPrimaryBrush}" FontFamily="Consolas" FontSize="12" VerticalAlignment="Center" Margin="10,0,0,0" />
+                                    <TextBlock Text="Overlay Size" Foreground="{StaticResource TextPrimaryBrush}" FontSize="12" VerticalAlignment="Center" />
+                                </DockPanel>
+                                <Slider Minimum="0.5" Maximum="2" Value="{Binding OverlayScale, Mode=TwoWay}" Margin="0,8,0,0" />
+                            </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource ToggleRow}">
+                            <DockPanel>
+                                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                                    <Button Content="Browse..." Style="{StaticResource ThemedButton}" Padding="10,4" FontSize="11" Click="BrowseBackgroundImage_Click" />
+                                    <Button Content="Clear" Style="{StaticResource ThemedButton}" Padding="10,4" FontSize="11" Margin="6,0,0,0"
+                                            Click="ClearBackgroundImage_Click"
+                                            Visibility="{Binding OverlayBackgroundImagePath, Converter={StaticResource NullToVisibilityConverter}, FallbackValue=Collapsed}" />
+                                </StackPanel>
+                                <StackPanel>
+                                    <TextBlock Text="Background Image" Foreground="{StaticResource TextPrimaryBrush}" FontSize="12" />
+                                    <TextBlock Text="{Binding OverlayBackgroundImagePath, Converter={StaticResource PathToFileNameConverter}}"
+                                               Foreground="{StaticResource TextDimBrush}" FontStyle="Italic" FontSize="10" TextTrimming="CharacterEllipsis" />
+                                </StackPanel>
+                            </DockPanel>
+                        </Border>
+
+                        <TextBlock Text="Section Styling" Style="{StaticResource SectionHeader}" />
+                        <Border Style="{StaticResource ToggleRow}">
+                            <DockPanel>
+                                <CheckBox DockPanel.Dock="Right" IsChecked="{Binding OverlayTimesHaveBackground, Mode=TwoWay}" VerticalAlignment="Center" />
+                                <StackPanel>
+                                    <TextBlock Text="Times Have a Background" Foreground="{StaticResource TextPrimaryBrush}" FontSize="12" />
+                                    <TextBlock Text="Off by default — draws a small highlighted pill behind every time value (Biome/Depth/Floor)." Foreground="{StaticResource TextDimBrush}" FontStyle="Italic" FontSize="10" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </DockPanel>
+                        </Border>
+
+                        <Border Style="{StaticResource ToggleRow}">
+                            <StackPanel>
+                                <DockPanel>
+                                    <TextBlock DockPanel.Dock="Right" Text="{Binding OverlayTitleFontSize, StringFormat={}{0:F0}pt}"
+                                               Foreground="{StaticResource TextPrimaryBrush}" FontFamily="Consolas" FontSize="12" VerticalAlignment="Center" Margin="10,0,0,0" />
+                                    <TextBlock Text="Title" Foreground="{StaticResource TextPrimaryBrush}" FontSize="12" FontWeight="Bold" VerticalAlignment="Center" />
+                                </DockPanel>
+                                <Slider Minimum="8" Maximum="24" Value="{Binding OverlayTitleFontSize, Mode=TwoWay}" Margin="0,8,0,10" />
+                                <StackPanel Orientation="Horizontal">
+                                    <Button Style="{StaticResource ColorSwatch}" Background="{StaticResource BrassBrush}" Tag="OverlayTitleTextColor|#C98F3F" Click="ColorSwatch_Click" />
+                                    <Button Style="{StaticResource ColorSwatch}" Background="{StaticResource TealGlowBrush}" Tag="OverlayTitleTextColor|#3FD6C0" Click="ColorSwatch_Click" />
+                                    <Button Style="{StaticResource ColorSwatch}" Background="{StaticResource ToxicBrush}" Tag="OverlayTitleTextColor|#C7FF3D" Click="ColorSwatch_Click" />
+                                    <Button Style="{StaticResource ColorSwatch}" Background="{StaticResource MagentaBrush}" Tag="OverlayTitleTextColor|#D94F9A" Click="ColorSwatch_Click" />
+                                    <Button Style="{StaticResource ColorSwatch}" Background="{StaticResource TextPrimaryBrush}" Tag="OverlayTitleTextColor|#ECE3D0" Click="ColorSwatch_Click" />
+                                    <Button Style="{StaticResource ColorSwatch}" Background="{StaticResource TextMutedBrush}" Tag="OverlayTitleTextColor|#8A9994" Click="ColorSwatch_Click" />
+                                    <Button Style="{StaticResource ColorPickerSwatch}" Tag="OverlayTitleTextColor" Click="OpenColorPicker_Click"
+                                            Background="{Binding OverlayTitleTextColor, Converter={StaticResource HexColorToBrushConverter}}" />
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Style="{StaticResource ToggleRow}">
+                            <StackPanel>
+                                <DockPanel>
+                                    <TextBlock DockPanel.Dock="Right" Text="{Binding OverlayBiomeFontSize, StringFormat={}{0:F0}pt}"
+                                               Foreground="{StaticResource TextPrimaryBrush}" FontFamily="Consolas" FontSize="12" VerticalAlignment="Center" Margin="10,0,0,0" />
+                                    <TextBlock Text="Biome" Foreground="{StaticResource TextPrimaryBrush}" FontSize="12" FontWeight="Bold" VerticalAlignment="Center" />
+                                </DockPanel>
+                                <Slider Minimum="8" Maximum="24" Value="{Binding OverlayBiomeFontSize, Mode=TwoWay}" Margin="0,8,0,10" />
+                                <StackPanel Orientation="Horizontal">
+                                    <Button Style="{StaticResource ColorSwatch}" Background="{StaticResource BrassBrush}" Tag="OverlayBiomeTextColor|#C98F3F" Click="ColorSwatch_Click" />
+                                    <Button Style="{StaticResource ColorSwatch}" Background="{StaticResource TealGlowBrush}" Tag="OverlayBiomeTextColor|#3FD6C0" Click="ColorSwatch_Click" />
+                                    <Button Style="{StaticResource ColorSwatch}" Background="{StaticResource ToxicBrush}" Tag="OverlayBiomeTextColor|#C7FF3D" Click="ColorSwatch_Click" />
+                                    <Button Style="{StaticResource ColorSwatch}" Background="{StaticResource MagentaBrush}" Tag="OverlayBiomeTextColor|#D94F9A" Click="ColorSwatch_Click" />
+                                    <Button Style="{StaticResource ColorSwatch}" Background="{StaticResource TextPrimaryBrush}" Tag="OverlayBiomeTextColor|#ECE3D0" Click="ColorSwatch_Click" />
+                                    <Button Style="{StaticResource ColorSwatch}" Background="{StaticResource TextMutedBrush}" Tag="OverlayBiomeTextColor|#8A9994" Click="ColorSwatch_Click" />
+                                    <Button Style="{StaticResource ColorPickerSwatch}" Tag="OverlayBiomeTextColor" Click="OpenColorPicker_Click"
+                                            Background="{Binding OverlayBiomeTextColor, Converter={StaticResource HexColorToBrushConverter}}" />
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Style="{StaticResource ToggleRow}">
+                            <StackPanel>
+                                <DockPanel>
+                                    <TextBlock DockPanel.Dock="Right" Text="{Binding OverlayDepthFontSize, StringFormat={}{0:F0}pt}"
+                                               Foreground="{StaticResource TextPrimaryBrush}" FontFamily="Consolas" FontSize="12" VerticalAlignment="Center" Margin="10,0,0,0" />
+                                    <TextBlock Text="Depth" Foreground="{StaticResource TextPrimaryBrush}" FontSize="12" FontWeight="Bold" VerticalAlignment="Center" />
+                                </DockPanel>
+                                <Slider Minimum="8" Maximum="24" Value="{Binding OverlayDepthFontSize, Mode=TwoWay}" Margin="0,8,0,10" />
+                                <StackPanel Orientation="Horizontal">
+                                    <Button Style="{StaticResource ColorSwatch}" Background="{StaticResource BrassBrush}" Tag="OverlayDepthTextColor|#C98F3F" Click="ColorSwatch_Click" />
+                                    <Button Style="{StaticResource ColorSwatch}" Background="{StaticResource TealGlowBrush}" Tag="OverlayDepthTextColor|#3FD6C0" Click="ColorSwatch_Click" />
+                                    <Button Style="{StaticResource ColorSwatch}" Background="{StaticResource ToxicBrush}" Tag="OverlayDepthTextColor|#C7FF3D" Click="ColorSwatch_Click" />
+                                    <Button Style="{StaticResource ColorSwatch}" Background="{StaticResource MagentaBrush}" Tag="OverlayDepthTextColor|#D94F9A" Click="ColorSwatch_Click" />
+                                    <Button Style="{StaticResource ColorSwatch}" Background="{StaticResource TextPrimaryBrush}" Tag="OverlayDepthTextColor|#ECE3D0" Click="ColorSwatch_Click" />
+                                    <Button Style="{StaticResource ColorSwatch}" Background="{StaticResource TextMutedBrush}" Tag="OverlayDepthTextColor|#8A9994" Click="ColorSwatch_Click" />
+                                    <Button Style="{StaticResource ColorPickerSwatch}" Tag="OverlayDepthTextColor" Click="OpenColorPicker_Click"
+                                            Background="{Binding OverlayDepthTextColor, Converter={StaticResource HexColorToBrushConverter}}" />
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Style="{StaticResource ToggleRow}">
+                            <StackPanel>
+                                <DockPanel>
+                                    <TextBlock DockPanel.Dock="Right" Text="{Binding OverlayFloorFontSize, StringFormat={}{0:F0}pt}"
+                                               Foreground="{StaticResource TextPrimaryBrush}" FontFamily="Consolas" FontSize="12" VerticalAlignment="Center" Margin="10,0,0,0" />
+                                    <TextBlock Text="Floor" Foreground="{StaticResource TextPrimaryBrush}" FontSize="12" FontWeight="Bold" VerticalAlignment="Center" />
+                                </DockPanel>
+                                <Slider Minimum="8" Maximum="24" Value="{Binding OverlayFloorFontSize, Mode=TwoWay}" Margin="0,8,0,10" />
+                                <StackPanel Orientation="Horizontal">
+                                    <Button Style="{StaticResource ColorSwatch}" Background="{StaticResource BrassBrush}" Tag="OverlayFloorTextColor|#C98F3F" Click="ColorSwatch_Click" />
+                                    <Button Style="{StaticResource ColorSwatch}" Background="{StaticResource TealGlowBrush}" Tag="OverlayFloorTextColor|#3FD6C0" Click="ColorSwatch_Click" />
+                                    <Button Style="{StaticResource ColorSwatch}" Background="{StaticResource ToxicBrush}" Tag="OverlayFloorTextColor|#C7FF3D" Click="ColorSwatch_Click" />
+                                    <Button Style="{StaticResource ColorSwatch}" Background="{StaticResource MagentaBrush}" Tag="OverlayFloorTextColor|#D94F9A" Click="ColorSwatch_Click" />
+                                    <Button Style="{StaticResource ColorSwatch}" Background="{StaticResource TextPrimaryBrush}" Tag="OverlayFloorTextColor|#ECE3D0" Click="ColorSwatch_Click" />
+                                    <Button Style="{StaticResource ColorSwatch}" Background="{StaticResource TextMutedBrush}" Tag="OverlayFloorTextColor|#8A9994" Click="ColorSwatch_Click" />
+                                    <Button Style="{StaticResource ColorPickerSwatch}" Tag="OverlayFloorTextColor" Click="OpenColorPicker_Click"
+                                            Background="{Binding OverlayFloorTextColor, Converter={StaticResource HexColorToBrushConverter}}" />
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <Button Content="Reset to Default" Style="{StaticResource ThemedButton}"
+                                HorizontalAlignment="Left" Margin="0,4,0,0" Padding="10,4" FontSize="11"
+                                Click="ResetOverlayAppearance_Click" />
+                        </StackPanel>
+
+                        <TextBlock Text="Split Display" Style="{StaticResource SectionHeader}" />
+                        <Border Style="{StaticResource ToggleRow}">
+                            <DockPanel>
+                                <ComboBox DockPanel.Dock="Right" MinWidth="100" VerticalAlignment="Center"
+                                          ItemsSource="{Binding AllSplitDetailLevels}" SelectedItem="{Binding SplitDetailLevel, Mode=TwoWay}"
+                                          IsEnabled="{Binding IsInRun, Converter={StaticResource InverseBoolConverter}}">
+                                    <ComboBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding Converter={StaticResource SplitDetailLevelToDisplayNameConverter}}" />
+                                        </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
+                                <StackPanel>
+                                    <TextBlock Text="Split Detail Level" Foreground="{StaticResource TextPrimaryBrush}" FontSize="12" />
+                                    <TextBlock Text="Total: no split list, just the timer. Per-Depth: one row per depth. Per-Room: also breaks out each depth's rooms — which depths depends on List Overflow Behavior below." Foreground="{StaticResource TextDimBrush}" FontStyle="Italic" FontSize="10" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </DockPanel>
+                        </Border>
+                        <Border Style="{StaticResource ToggleRow}">
+                            <DockPanel>
+                                <ComboBox DockPanel.Dock="Right" MinWidth="100" VerticalAlignment="Center"
+                                          ItemsSource="{Binding AllSplitListOverflowBehaviors}" SelectedItem="{Binding SplitListOverflowBehavior, Mode=TwoWay}"
+                                          IsEnabled="{Binding IsInRun, Converter={StaticResource InverseBoolConverter}}">
+                                    <ComboBox.ItemTemplate>
+                                        <DataTemplate>
+                                            <TextBlock Text="{Binding Converter={StaticResource SplitListOverflowBehaviorToDisplayNameConverter}}" />
+                                        </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
+                                <StackPanel>
+                                    <TextBlock Text="List Overflow Behavior" Foreground="{StaticResource TextPrimaryBrush}" FontSize="12" />
+                                    <TextBlock Text="Collapse: finished biomes fold to one line (and, in Per-Room, each depth's rooms fold once you're past it). Scroll: nothing folds, fixed-height, auto-scrolls to the current segment. Full List: nothing folds, no height cap, the overlay grows as needed." Foreground="{StaticResource TextDimBrush}" FontStyle="Italic" FontSize="10" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </DockPanel>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+        </TabControl>
+
+        <StackPanel Grid.RowSpan="2" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top">
+            <Button Style="{StaticResource CaptionButton}" Content="&#xE921;" FontFamily="Segoe MDL2 Assets"
+                    Tag="#1F2A26" Click="Minimize_Click" />
+            <Button Style="{StaticResource CaptionButton}" Content="&#xE8BB;" FontFamily="Segoe MDL2 Assets"
+                    Tag="#7A2E2E" Click="Close_Click" />
+        </StackPanel>
+    </Grid>
+</Window>

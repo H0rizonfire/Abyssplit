@@ -1,0 +1,131 @@
+<Window x:Class="AbyssusTimer.App.Windows.OverlayWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:engine="clr-namespace:AbyssusTimer.App.Engine"
+        Title="Abyssplit Overlay"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        Topmost="True"
+        ShowInTaskbar="False"
+        ResizeMode="NoResize"
+        SizeToContent="WidthAndHeight"
+        WindowStartupLocation="Manual">
+    <Border x:Name="RootBorder"
+            Background="#E60A1210"
+            BorderBrush="{StaticResource HairlineBrush}"
+            BorderThickness="1"
+            CornerRadius="6"
+            Padding="14,12"
+            MinWidth="230"
+            MouseLeftButtonDown="RootBorder_MouseLeftButtonDown">
+        <StackPanel>
+            <TextBlock FontSize="{Binding OverlayTitleFontSize}" FontWeight="Bold"
+                       Foreground="{Binding OverlayTitleTextColor, Converter={StaticResource HexColorToBrushConverter}}">
+                <Run Text="ABYSSPLIT · " />
+                <Run Text="{Binding OverlayDisplayBiomeName, Mode=OneWay}" />
+            </TextBlock>
+            <Border BorderBrush="{StaticResource HairlineBrush}" BorderThickness="0,0,0,1" Margin="0,8,0,8" />
+
+            <ScrollViewer x:Name="SplitsScrollViewer" VerticalScrollBarVisibility="Hidden"
+                          MaxHeight="{Binding SplitListOverflowBehavior, Converter={StaticResource SplitListOverflowBehaviorToMaxHeightConverter}}"
+                          Visibility="{Binding SplitDetailLevel, Converter={StaticResource SplitDetailLevelToVisibilityConverter}}"
+                          Margin="0,0,0,6">
+                <ItemsControl ItemsSource="{Binding OverlayDisplaySplitGroups}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="{x:Type engine:BiomeGroupViewModel}">
+                            <StackPanel Margin="0,3,0,0">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="{Binding BiomeName}" FontWeight="Bold" Margin="0,0,10,0"
+                                               FontSize="{Binding DataContext.OverlayBiomeFontSize, RelativeSource={RelativeSource AncestorType=Window}}"
+                                               Foreground="{Binding DataContext.OverlayBiomeTextColor, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource HexColorToBrushConverter}}" />
+                                    <Border Grid.Column="1" CornerRadius="3" Padding="4,0"
+                                            Background="{Binding DataContext.OverlayTimesHaveBackground, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource TimeBackgroundBrushConverter}}">
+                                        <TextBlock Text="{Binding TotalTimeText}" FontFamily="Consolas" FontWeight="Bold"
+                                                   FontSize="{Binding DataContext.OverlayBiomeFontSize, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                   Foreground="{Binding DataContext.OverlayBiomeTextColor, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource HexColorToBrushConverter}}" />
+                                    </Border>
+                                </Grid>
+                                <ItemsControl Margin="8,0,0,0" ItemsSource="{Binding Depths}"
+                                              Visibility="{Binding ShowDepthsInOverlay, Converter={StaticResource BoolToVisibilityConverter}}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate DataType="{x:Type engine:DepthRowViewModel}">
+                                            <StackPanel Margin="0,1">
+                                                <Grid>
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="Auto" />
+                                                        <ColumnDefinition Width="Auto" />
+                                                        <ColumnDefinition Width="Auto" />
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBlock Grid.Column="0" Text="{Binding Label}" Margin="0,0,10,0"
+                                                               FontSize="{Binding DataContext.OverlayDepthFontSize, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                               Foreground="{Binding DataContext.OverlayDepthTextColor, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource HexColorToBrushConverter}}" />
+                                                    <TextBlock Grid.Column="1" Text="{Binding DeltaText}"
+                                                               Foreground="{Binding DeltaSeverity, Converter={StaticResource DeltaSeverityToBrushConverter}}"
+                                                               FontFamily="Consolas"
+                                                               FontSize="{Binding DataContext.OverlayDepthFontSize, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                               Margin="0,0,6,0"
+                                                               Visibility="{Binding DeltaText, Converter={StaticResource NullToVisibilityConverter}, FallbackValue=Collapsed}" />
+                                                    <Border Grid.Column="2" CornerRadius="3" Padding="4,0"
+                                                            Background="{Binding DataContext.OverlayTimesHaveBackground, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource TimeBackgroundBrushConverter}}">
+                                                        <TextBlock Text="{Binding TimeText}" Foreground="{StaticResource TextPrimaryBrush}" FontFamily="Consolas"
+                                                                   FontSize="{Binding DataContext.OverlayDepthFontSize, RelativeSource={RelativeSource AncestorType=Window}}" />
+                                                    </Border>
+                                                </Grid>
+                                                <ItemsControl Margin="10,0,0,0" ItemsSource="{Binding Rooms}"
+                                                              Visibility="{Binding ShowRoomsInOverlay, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate DataType="{x:Type engine:RoomRowViewModel}">
+                                                            <Grid Margin="0,1">
+                                                                <Grid.ColumnDefinitions>
+                                                                    <ColumnDefinition Width="Auto" />
+                                                                    <ColumnDefinition Width="Auto" />
+                                                                </Grid.ColumnDefinitions>
+                                                                <TextBlock Grid.Column="0" Text="{Binding Label}" Margin="0,0,10,0"
+                                                                           FontSize="{Binding DataContext.OverlayFloorFontSize, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                           Foreground="{Binding DataContext.OverlayFloorTextColor, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource HexColorToBrushConverter}}" />
+                                                                <Border Grid.Column="1" CornerRadius="3" Padding="4,0"
+                                                                        Background="{Binding DataContext.OverlayTimesHaveBackground, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource TimeBackgroundBrushConverter}}">
+                                                                    <TextBlock Text="{Binding TimeText}" FontFamily="Consolas"
+                                                                               FontSize="{Binding DataContext.OverlayFloorFontSize, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                                               Foreground="{Binding DataContext.OverlayFloorTextColor, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource HexColorToBrushConverter}}" />
+                                                                </Border>
+                                                            </Grid>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+            <Border BorderBrush="{StaticResource HairlineBrush}" BorderThickness="0,0,0,1" Margin="0,0,0,4" />
+
+            <TextBlock Text="{Binding OverlayDisplayPrimaryTimeText}"
+                       FontFamily="Consolas"
+                       FontSize="30"
+                       Foreground="{StaticResource TextPrimaryBrush}"
+                       HorizontalAlignment="Center"
+                       Margin="0,4,0,4" />
+
+            <Grid Visibility="{Binding ShowPreviousSegment, Converter={StaticResource BoolToVisibilityConverter}}">
+                <Grid Visibility="{Binding PreviousRunTimeText, Converter={StaticResource NullToVisibilityConverter}, FallbackValue=Collapsed}">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" Text="Prev. Run" Foreground="{StaticResource TextDimBrush}" FontSize="10" />
+                    <TextBlock Grid.Column="1" Text="{Binding PreviousRunTimeText}" Foreground="{StaticResource ToxicBrush}" FontFamily="Consolas" FontSize="10" />
+                </Grid>
+            </Grid>
+        </StackPanel>
+    </Border>
+</Window>

@@ -1,0 +1,55 @@
+<Window x:Class="AbyssusTimer.App.Windows.RunnerNamePromptWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Export Split File"
+        SizeToContent="WidthAndHeight" ResizeMode="NoResize"
+        WindowStartupLocation="CenterOwner"
+        WindowStyle="None" AllowsTransparency="True" Background="Transparent"
+        ShowInTaskbar="False">
+    <Border Background="#17211D" BorderBrush="#3A4A44" BorderThickness="1" CornerRadius="8" Padding="24" MinWidth="340" MaxWidth="400">
+        <StackPanel>
+            <TextBlock Text="Export Split File" Foreground="#ECE3D0" FontSize="16" FontWeight="Bold" TextWrapping="Wrap" />
+            <TextBlock Text="Your name — shown to whoever races this split, and used to tell splits apart if you submit this for record verification."
+                       Foreground="#8A9994" FontSize="11" Margin="0,10,0,10" TextWrapping="Wrap" />
+            <TextBox x:Name="NameTextBox" Padding="8,6" FontSize="13"
+                     Background="#0A1210" Foreground="#ECE3D0" BorderBrush="#3A4A44" BorderThickness="1"
+                     KeyDown="NameTextBox_KeyDown" />
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
+                <Button x:Name="CancelButton" Content="Cancel" Padding="14,8" FontSize="12" Cursor="Hand" Margin="0,0,8,0"
+                        Background="#17211D" Foreground="#ECE3D0" BorderBrush="#3A4A44" BorderThickness="1"
+                        Click="Cancel_Click">
+                    <Button.Template>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="Bg" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="6">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="{TemplateBinding Padding}" />
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="Bg" Property="Background" Value="#1F2A26" />
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Button.Template>
+                </Button>
+                <Button x:Name="ExportButton" Content="Export" Padding="14,8" FontSize="12" Cursor="Hand"
+                        Background="#C98F3F" Foreground="#17211D" BorderBrush="#C98F3F" BorderThickness="1" FontWeight="Bold"
+                        Click="Export_Click">
+                    <Button.Template>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="Bg" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="6">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="{TemplateBinding Padding}" />
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="Bg" Property="Background" Value="#E3B06A" />
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Button.Template>
+                </Button>
+            </StackPanel>
+        </StackPanel>
+    </Border>
+</Window>

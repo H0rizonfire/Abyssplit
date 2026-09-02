@@ -1,0 +1,50 @@
+#!/bin/sh
+
+set -e
+
+MAX_BYTES=5242880  # 5MB — catches an accidentally-staged binary/dump before it enters history
+staged_files=$(git diff --cached --name-only --diff-filter=ACM)
+
+block=0
+
+for f in $staged_files; do
+    if [ -f "$f" ]; then
+        size=$(wc -c < "$f" | tr -d ' ')
+        if [ "$size" -gt "$MAX_BYTES" ]; then
+            echo "BLOCKED: '$f' is $size bytes (over the 5MB limit)."
+            echo "  If this is real project content, use Git LFS instead of committing it directly."
+            block=1
+        fi
+    fi
+done
+
+diff_content=$(git diff --cached -U0 -- . ':!*.lock' ':!package-lock.json')
+
+check_pattern() {
+    pattern=$1
+    label=$2
+    hits=$(printf '%s\n' "$diff_content" | grep -nE "^\+" | grep -viE '^\+\+\+' | grep -E "$pattern" || true)
+    if [ -n "$hits" ]; then
+        echo "BLOCKED: possible $label found in staged changes:"
+        echo "$hits" | sed 's/^/    /'
+        block=1
+    fi
+}
+
+check_pattern '(AKIA|ASIA)[0-9A-Z]{16}' "AWS access key"
+check_pattern 'gh[pousr]_[A-Za-z0-9]{20,}' "GitHub token"
+check_pattern 'github_pat_[A-Za-z0-9_]{20,}' "GitHub fine-grained token"
+check_pattern 'xox[baprs]-[A-Za-z0-9-]{10,}' "Slack token"
+check_pattern 'BEGIN (RSA|OPENSSH|EC|DSA|PGP) PRIVATE KEY' "private key"
+check_pattern '(api[_-]?key|secret|password|passwd|pwd)["'"'"']?\s*[:=]\s*["'"'"'][^"'"'"']{6,}["'"'"']' "hardcoded credential"
+
+check_pattern 'C:\\\\Users\\\\atrey' "hardcoded local file path"
+
+if [ "$block" -ne 0 ]; then
+    echo ""
+    echo "Commit blocked by .githooks/pre-commit. Fix the above, or if this is a false positive,"
+    echo "skip once with 'git commit --no-verify' (only if you're SURE)."
+    exit 1
+fi
+
+exit 0

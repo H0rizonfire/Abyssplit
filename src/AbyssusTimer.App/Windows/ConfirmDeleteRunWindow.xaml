@@ -1,0 +1,57 @@
+<Window x:Class="AbyssusTimer.App.Windows.ConfirmDeleteRunWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Delete Run?"
+        SizeToContent="WidthAndHeight" ResizeMode="NoResize"
+        WindowStartupLocation="CenterOwner"
+        WindowStyle="None" AllowsTransparency="True" Background="Transparent"
+        ShowInTaskbar="False">
+    <Border Background="#17211D" BorderBrush="#3A4A44" BorderThickness="1" CornerRadius="8" Padding="24" MinWidth="340" MaxWidth="420">
+        <StackPanel>
+            <TextBlock Text="Delete This Run?" Foreground="#ECE3D0" FontSize="15" FontWeight="Bold" />
+            <TextBlock x:Name="RunLabelText" Foreground="#8A9994" FontSize="12" Margin="0,10,0,0" TextWrapping="Wrap" />
+            <TextBlock x:Name="PbWarningText"
+                       Text="This run is your current full-run Personal Best. Deleting it won't change your recorded PB time, but you'll lose this attempt's split breakdown."
+                       Foreground="#E36A6A" FontSize="11" Margin="0,10,0,0" TextWrapping="Wrap"
+                       Visibility="Collapsed" />
+            <TextBlock Text="This can't be undone." Foreground="#56635E" FontStyle="Italic" FontSize="11" Margin="0,10,0,0" />
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
+                <Button x:Name="CancelButton" Content="Cancel" Padding="14,8" FontSize="12" Cursor="Hand" Margin="0,0,8,0"
+                        Background="#17211D" Foreground="#ECE3D0" BorderBrush="#3A4A44" BorderThickness="1"
+                        Click="Cancel_Click">
+                    <Button.Template>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="Bg" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="6">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="{TemplateBinding Padding}" />
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="Bg" Property="Background" Value="#1F2A26" />
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Button.Template>
+                </Button>
+                <Button x:Name="DeleteButton" Content="Delete" Padding="14,8" FontSize="12" Cursor="Hand"
+                        Background="#17211D" Foreground="#E36A6A" BorderBrush="#7A2E2E" BorderThickness="1"
+                        Click="Delete_Click">
+                    <Button.Template>
+                        <ControlTemplate TargetType="Button">
+                            <Border x:Name="Bg" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="6">
+                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="{TemplateBinding Padding}" />
+                            </Border>
+                            <ControlTemplate.Triggers>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter TargetName="Bg" Property="Background" Value="#7A2E2E" />
+                                    <Setter Property="Foreground" Value="#ECE3D0" />
+                                </Trigger>
+                            </ControlTemplate.Triggers>
+                        </ControlTemplate>
+                    </Button.Template>
+                </Button>
+            </StackPanel>
+        </StackPanel>
+    </Border>
+</Window>
