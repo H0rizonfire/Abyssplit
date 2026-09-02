@@ -83,7 +83,16 @@ the Configurator's **Overlay** tab:
   completed sections, scroll, or just grow).
 
 Toggle **Edit Overlay Layout** from the Configurator to drag/resize the overlay; it's click-through
-and non-interactive the rest of the time so it never gets in the way in-game.
+and non-interactive the rest of the time so it never gets in the way in-game. The overlay's title
+line always shows the running app version, so it's identifiable from a screenshot or stream clip
+without needing the exported split file for that.
+
+### Staying up to date
+
+Abyssplit checks GitHub for a newer release once at startup and shows a dismissible banner in the
+Configurator if one's available. Times recorded on an outdated version may not be accepted for
+leaderboard submission, so it's worth keeping current. This check is best-effort — no network
+access, or GitHub being unreachable, just means it silently doesn't show anything.
 
 ### Running in the background
 

@@ -300,6 +300,21 @@ public partial class ConfiguratorWindow : Window
     private void About_Click(object sender, RoutedEventArgs e) =>
         new AboutWindow(_engine.AppVersionText) { Owner = this }.ShowDialog();
 
+    private void OpenLatestRelease_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            Process.Start(new ProcessStartInfo($"{AppInfo.GitHubRepoUrl}/releases/latest") { UseShellExecute = true });
+        }
+        catch (Exception ex)
+        {
+            AppLog.LogException("Failed to open latest release page from update banner", ex);
+        }
+    }
+
+    private void DismissUpdateBanner_Click(object sender, RoutedEventArgs e) =>
+        UpdateBanner.Visibility = Visibility.Collapsed;
+
     private void ResetOverlayAppearance_Click(object sender, RoutedEventArgs e) =>
         _engine.ResetOverlayAppearanceToDefaults();
 

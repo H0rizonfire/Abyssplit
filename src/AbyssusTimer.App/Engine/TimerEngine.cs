@@ -105,6 +105,37 @@ public sealed class TimerEngine : INotifyPropertyChanged, IDisposable
     public string AppVersionText { get; } =
         $"v{System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "?"}";
 
+    private bool _isUpdateAvailable;
+    public bool IsUpdateAvailable
+    {
+        get => _isUpdateAvailable;
+        private set => SetField(ref _isUpdateAvailable, value);
+    }
+
+    private string? _latestVersionText;
+    public string? LatestVersionText
+    {
+        get => _latestVersionText;
+        private set => SetField(ref _latestVersionText, value);
+    }
+
+    public async Task CheckForUpdateAsync()
+    {
+        var latest = await UpdateChecker.GetLatestVersionAsync();
+        if (latest is null)
+            return;
+
+        var currentVersionText = AppVersionText.TrimStart('v', 'V');
+        if (!Version.TryParse(latest, out var latestVersion) || !Version.TryParse(currentVersionText, out var currentVersion))
+            return;
+
+        if (latestVersion > currentVersion)
+        {
+            LatestVersionText = latest;
+            IsUpdateAvailable = true;
+        }
+    }
+
     public TimerEngine()
     {
         _reader = new AbyssusStatsReader(_process);
@@ -1097,12 +1128,14 @@ public sealed class TimerEngine : INotifyPropertyChanged, IDisposable
             var countThroughStall = !PauseStopsTime;
             var notInRunExclusion = !stats.IsInRun;
 
-            _adjustedTimer.Update(stats.RunTime, stats.IsInRun, stats.IsLoading, stats.IsLoading || pauseExclusion || notInRunExclusion || _currentRunCompleted, countThroughStall);
+            var notYetSeenLobbyExclusion = !_hasSeenLobbyThisSession;
+
+            _adjustedTimer.Update(stats.RunTime, stats.IsInRun, stats.IsLoading, stats.IsLoading || pauseExclusion || notInRunExclusion || _currentRunCompleted || notYetSeenLobbyExclusion, countThroughStall);
 
             cutsceneCheckStopwatch.Restart();
             var isCutscenePlaying = _cutsceneTracker?.IsCutscenePlaying() ?? false;
             cutsceneCheckMs += cutsceneCheckStopwatch.Elapsed.TotalMilliseconds;
-            _loadAndCutsceneFreeTimer.Update(stats.RunTime, stats.IsInRun, stats.IsLoading, stats.IsLoading || isCutscenePlaying || pauseExclusion || notInRunExclusion || _currentRunCompleted, countThroughStall);
+            _loadAndCutsceneFreeTimer.Update(stats.RunTime, stats.IsInRun, stats.IsLoading, stats.IsLoading || isCutscenePlaying || pauseExclusion || notInRunExclusion || _currentRunCompleted || notYetSeenLobbyExclusion, countThroughStall);
 
             var outgoingDepthWasBossRoom = _currentDepthBossDisplayName is not null;
             var outgoingDepthEliteName = _currentDepthEliteName;

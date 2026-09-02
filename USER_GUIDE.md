@@ -14,6 +14,10 @@ Windows may also show a SmartScreen warning the first time you run the installer
 — expected for an unsigned app, not a sign anything is wrong; click **More info**, then **Run
 anyway**.
 
+Abyssplit also checks once at startup for a newer release, and shows a dismissible banner at the
+top of the Configurator if one's available. Times recorded on an outdated version may not be
+accepted for leaderboard submission, so it's worth updating when prompted.
+
 ## The Main tab
 
 **Timers** — three run side by side:
@@ -101,7 +105,9 @@ the project repository.
 ## The Overlay tab
 
 **Edit Overlay Layout** — toggle on to drag the overlay into position in-game; toggle off to
-return it to click-through (mouse input passes straight to the game).
+return it to click-through (mouse input passes straight to the game). If you last positioned the
+overlay on a second monitor that isn't connected the next time you launch, it automatically resets
+to a default position instead of opening somewhere unreachable.
 
 **Preview** — shows sample split data on the overlay so you can see appearance changes without
 being in a real run. Also unlocks every setting below it.
@@ -117,7 +123,8 @@ being in a real run. Also unlocks every setting below it.
 - **Times Have a Background** — off by default; draws a small highlighted pill behind every time
   value.
 - **Title / Biome / Depth / Floor** — independent font size and text color for each section. Title
-  is the overlay's static "ABYSSPLIT · {biome}" header; Floor is the innermost per-room breakdown.
+  is the overlay's static "ABYSSPLIT · {biome}" header (which always ends with the running app
+  version, not customizable); Floor is the innermost per-room breakdown.
 
 **Reset to Default** reverts every appearance setting above to its shipped default in one click.
 

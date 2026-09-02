@@ -24,6 +24,8 @@
                        Foreground="{Binding OverlayTitleTextColor, Converter={StaticResource HexColorToBrushConverter}}">
                 <Run Text="ABYSSPLIT · " />
                 <Run Text="{Binding OverlayDisplayBiomeName, Mode=OneWay}" />
+                <Run Text=" · " Foreground="{StaticResource TextDimBrush}" FontSize="9" FontWeight="Normal" />
+                <Run Text="{Binding AppVersionText, Mode=OneTime}" Foreground="{StaticResource TextDimBrush}" FontSize="9" FontWeight="Normal" BaselineAlignment="Center" />
             </TextBlock>
             <Border BorderBrush="{StaticResource HairlineBrush}" BorderThickness="0,0,0,1" Margin="0,8,0,8" />
 

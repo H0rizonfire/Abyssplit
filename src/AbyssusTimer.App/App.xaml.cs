@@ -28,7 +28,7 @@ public partial class App : Application
     {
         base.OnStartup(e);
 
-        ShutdownMode = ShutdownMode.OnMainWindowClose;
+        ShutdownMode = ShutdownMode.OnExplicitShutdown;
 
         AppLog.Initialize();
         DispatcherUnhandledException += (_, args) =>
@@ -119,16 +119,25 @@ public partial class App : Application
             OverlayTitleTextColor = _settings.OverlayTitleTextColor,
         };
 
+        var overlayLeft = _settings.OverlayLeft;
+        var overlayTop = _settings.OverlayTop;
+        if (!IsPositionOnAnyScreen(overlayLeft, overlayTop))
+        {
+            overlayLeft = 120;
+            overlayTop = 120;
+        }
+
         _overlay = new OverlayWindow
         {
-            Left = _settings.OverlayLeft,
-            Top = _settings.OverlayTop,
+            Left = overlayLeft,
+            Top = overlayTop,
             DataContext = _engine,
         };
         _overlay.Show();
 
         var configurator = new ConfiguratorWindow(_overlay, _engine, _settings);
         MainWindow = configurator;
+        ShutdownMode = ShutdownMode.OnMainWindowClose;
 
         if (e.Args.Contains("--tray", StringComparer.OrdinalIgnoreCase))
             configurator.ShowMinimizedToTray();
@@ -142,7 +151,13 @@ public partial class App : Application
 #if TRUSTED_BUILD
         CompositionTarget.Rendering += OnRendering;
 #endif
+
+        _ = _engine.CheckForUpdateAsync();
     }
+
+    private static bool IsPositionOnAnyScreen(double left, double top) =>
+        System.Windows.Forms.Screen.AllScreens.Any(screen =>
+            screen.Bounds.Contains((int)left, (int)top));
 
     private void PollLoop()
     {
