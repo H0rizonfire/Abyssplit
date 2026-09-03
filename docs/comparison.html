@@ -1,0 +1,412 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Abyssplit vs LiveSplit</title>
+<meta name="description" content="A feature comparison for Abyssus runners: what a game-reading, purpose-built timer can do that a general-purpose splitting tool can't, plus what's coming next.">
+<link rel="icon" href="favicon.ico">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0A1210;
+    --surface:#17211D;
+    --surface-raised:#22302A;
+    --hairline:#3A4A44;
+    --brass:#C98F3F;
+    --brass-light:#E3B06A;
+    --brass-dim:#8A6430;
+    --teal:#3FD6C0;
+    --toxic:#C7FF3D;
+    --warn:#E3C93D;
+    --text:#ECE3D0;
+    --text-muted:#8A9994;
+    --text-dim:#56635E;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:'Inter',system-ui,-apple-system,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    overflow-x:hidden;
+  }
+  @media (prefers-reduced-motion: reduce){
+    html{scroll-behavior:auto;}
+    *{animation-duration:0.001ms !important; transition-duration:0.001ms !important;}
+  }
+  a{color:var(--brass-light);}
+  .mono{font-family:'JetBrains Mono',ui-monospace,Consolas,monospace;}
+  .wrap{max-width:980px;margin:0 auto;padding:0 28px;}
+
+  /* ---------- nav (matches index.html) ---------- */
+  nav{
+    position:sticky;top:0;z-index:20;
+    background:rgba(10,18,16,0.82);
+    backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--hairline);
+  }
+  nav .wrap{display:flex;align-items:center;justify-content:space-between;height:64px;max-width:1080px;}
+  .brand{font-family:'Rajdhani',sans-serif;font-weight:700;font-size:19px;letter-spacing:0.03em;color:var(--text);text-decoration:none;}
+  .brand span{color:var(--brass);}
+  nav .links{display:flex;gap:28px;align-items:center;}
+  nav .links a{color:var(--text-muted);text-decoration:none;font-size:14px;font-weight:500;transition:color 0.15s;}
+  nav .links a:hover{color:var(--brass-light);}
+  .nav-cta{
+    background:var(--brass);color:var(--bg) !important;
+    padding:8px 16px;border-radius:5px;font-weight:600 !important;
+  }
+  .nav-cta:hover{background:var(--brass-light);}
+  @media (max-width:720px){ nav .links a:not(.nav-cta){display:none;} }
+
+  /* ---------- hero ---------- */
+  .hero{position:relative;padding:72px 0 52px;overflow:hidden;text-align:center;}
+  .hero::before{
+    content:"";position:absolute;inset:0;z-index:0;
+    background:radial-gradient(ellipse 640px 380px at 50% -10%, rgba(63,214,192,0.09), transparent 60%),
+               radial-gradient(ellipse 700px 420px at 85% 20%, rgba(201,143,63,0.07), transparent 55%);
+  }
+  .hero-inner{position:relative;z-index:1;}
+  h1.title{
+    font-family:'Rajdhani',sans-serif;font-weight:700;
+    font-size:clamp(34px,6vw,54px);
+    letter-spacing:0.01em;line-height:1.05;
+    margin:0 0 18px;color:var(--text);text-wrap:balance;
+  }
+  h1.title .vs{color:var(--text-dim);font-weight:500;padding:0 6px;}
+  h1.title .abyssplit{color:var(--brass);}
+  h1.title .livesplit{color:var(--text-muted);}
+  .tagline{
+    max-width:600px;margin:0 auto;
+    font-size:16px;line-height:1.65;color:var(--text-muted);
+    text-wrap:balance;
+  }
+  .tagline strong{color:var(--text);font-weight:600;}
+
+  section{padding:0 0 64px;}
+  .section-head{max-width:640px;margin:0 auto 32px;text-align:center;}
+  .kicker{
+    font-family:'JetBrains Mono',monospace;font-size:11.5px;letter-spacing:0.12em;text-transform:uppercase;
+    color:var(--brass-light);margin-bottom:10px;
+  }
+  h2{
+    font-family:'Rajdhani',sans-serif;font-weight:700;font-size:clamp(24px,3.4vw,30px);
+    margin:0 0 10px;color:var(--text);text-wrap:balance;
+  }
+  .section-head p{color:var(--text-muted);font-size:15px;line-height:1.6;margin:0;}
+
+  /* ---------- headline cards ---------- */
+  .headline-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;}
+  .headline-card{
+    background:var(--surface);border:1px solid var(--hairline);border-radius:12px;
+    padding:24px 22px;display:flex;flex-direction:column;gap:12px;
+  }
+  .headline-card .glyph{
+    width:40px;height:40px;border-radius:9px;flex:none;
+    background:var(--surface-raised);border:1px solid var(--hairline);
+    display:flex;align-items:center;justify-content:center;color:var(--toxic);
+  }
+  .headline-card h3{font-family:'Rajdhani',sans-serif;font-size:19px;font-weight:600;margin:0;color:var(--text);}
+  .headline-card p{font-size:14px;line-height:1.65;color:var(--text-muted);margin:0;}
+  .headline-card .none-tag{
+    font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.03em;
+    color:var(--warn);background:rgba(227,201,61,0.08);border:1px solid #4a4520;
+    padding:3px 9px;border-radius:4px;align-self:flex-start;
+  }
+
+  /* ---------- comparison table ---------- */
+  .table-scroll{overflow-x:auto;border:1px solid var(--hairline);border-radius:12px;background:var(--surface);}
+  table{width:100%;border-collapse:collapse;min-width:640px;}
+  thead th{
+    text-align:left;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;
+    color:var(--text-dim);padding:16px 20px 12px;border-bottom:1px solid var(--hairline);
+  }
+  thead th.col-tool{color:var(--text-muted);font-size:13px;letter-spacing:0.02em;text-transform:none;}
+  thead th.col-abyssplit{color:var(--brass-light);}
+  tbody tr.group-row td{
+    padding:16px 20px 6px;font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:0.1em;
+    text-transform:uppercase;color:var(--brass-dim);border-bottom:none;
+  }
+  tbody tr.group-row:not(:first-child) td{padding-top:24px;}
+  tbody tr.feature-row td{
+    padding:12px 20px;border-bottom:1px solid var(--hairline);font-size:14px;vertical-align:top;
+  }
+  tbody tr.feature-row:last-child td{border-bottom:none;}
+  td.feature-name{color:var(--text);font-weight:500;width:26%;}
+  td.cell-value{width:37%;}
+  .pill{
+    display:inline-flex;align-items:center;gap:6px;
+    font-size:13px;line-height:1.5;color:var(--text-muted);
+  }
+  .pill .dot{width:7px;height:7px;border-radius:50%;flex:none;margin-top:6px;}
+  .pill.good .dot{background:var(--toxic);box-shadow:0 0 6px rgba(199,255,61,0.5);}
+  .pill.good{color:var(--text);}
+  .pill.workaround .dot{background:var(--warn);}
+  .pill.none .dot{background:var(--text-dim);}
+  .pill.none{color:var(--text-dim);}
+  .pill.roadmap .dot{background:var(--teal);}
+
+  /* ---------- roadmap ---------- */
+  .roadmap-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;}
+  .roadmap-card{
+    background:var(--surface);border:1px solid var(--hairline);border-left:3px solid var(--teal);
+    border-radius:8px;padding:18px 20px;
+  }
+  .roadmap-card .tag{
+    font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:0.08em;text-transform:uppercase;
+    color:var(--teal);margin-bottom:8px;display:block;
+  }
+  .roadmap-card h3{font-family:'Rajdhani',sans-serif;font-size:17px;font-weight:600;margin:0 0 6px;color:var(--text);}
+  .roadmap-card p{font-size:13.5px;line-height:1.6;color:var(--text-muted);margin:0;}
+
+  /* ---------- legend + footer ---------- */
+  .legend{display:flex;gap:22px;flex-wrap:wrap;justify-content:center;margin:0 0 40px;font-size:12.5px;color:var(--text-muted);}
+  .legend span{display:inline-flex;align-items:center;gap:7px;}
+  .legend .dot{width:7px;height:7px;border-radius:50%;}
+
+  footer{border-top:1px solid var(--hairline);padding:40px 0;}
+  .footer-grid{display:flex;justify-content:space-between;flex-wrap:wrap;gap:28px;margin-bottom:28px;}
+  .footer-links{display:flex;gap:24px;flex-wrap:wrap;}
+  .footer-links a{color:var(--text-muted);text-decoration:none;font-size:14px;}
+  .footer-links a:hover{color:var(--brass-light);}
+  .footer-legal{font-size:12.5px;color:var(--text-dim);line-height:1.7;border-top:1px solid var(--hairline);padding-top:22px;}
+
+  @media (max-width:760px){
+    .headline-grid{grid-template-columns:1fr;}
+    .roadmap-grid{grid-template-columns:1fr;}
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <a class="brand" href="index.html">ABYSS<span>PLIT</span></a>
+    <div class="links">
+      <a href="index.html#features">Features</a>
+      <a href="index.html#install">Install</a>
+      <a href="https://github.com/H0rizonfire/Abyssplit/blob/main/USER_GUIDE.md">User Guide</a>
+      <a href="https://github.com/H0rizonfire/Abyssplit/blob/main/CHANGELOG.md">Changelog</a>
+      <a href="https://github.com/H0rizonfire/Abyssplit" class="nav-cta">GitHub</a>
+    </div>
+  </div>
+</nav>
+
+<div class="hero">
+  <div class="wrap hero-inner">
+    <h1 class="title"><span class="abyssplit">Abyssplit</span><span class="vs">vs</span><span class="livesplit">LiveSplit</span></h1>
+    <p class="tagline">LiveSplit is the standard for a reason — hundreds of supported games and a huge autosplitter
+    ecosystem. Abyssplit doesn't try to replace it everywhere. It's <strong>purpose-built for Abyssus</strong>,
+    reading the game's own memory to do a handful of things a general-purpose, hotkey-driven timer structurally
+    can't — for this game, today.</p>
+  </div>
+</div>
+
+<section>
+  <div class="wrap">
+    <div class="section-head">
+      <div class="kicker">The headline differences</div>
+      <h2>Three things live memory-reading unlocks</h2>
+    </div>
+    <div class="headline-grid">
+      <div class="headline-card">
+        <div class="glyph">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+        </div>
+        <h3>Cutscene-free timing</h3>
+        <p>Forced cutscenes are true dead time — you can't skip them, can't play through them, and have zero
+        control over their length. Abyssplit watches the game's own cutscene state live and strips that time
+        out automatically, same as load removal.</p>
+        <span class="none-tag">No Abyssus autosplitter does this</span>
+      </div>
+      <div class="headline-card">
+        <div class="glyph">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M18 17V9M13 17V5M8 17v-3"/></svg>
+        </div>
+        <h3>Splits built from live data</h3>
+        <p>LiveSplit runs off a split list authored before the run even starts. Abyssplit doesn't use a list at
+        all — it watches your actual floor and room in real time and creates the split the instant you reach it.
+        No missed splits, no fat-fingered hotkey.</p>
+        <span class="none-tag">No split list to author or maintain</span>
+      </div>
+      <div class="headline-card">
+        <div class="glyph">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.5 3.5a5 5 0 0 0-7 0L9 5"/><path d="M6.5 20.5a5 5 0 0 0 7 0L15 19"/><path d="M8 12h8"/></svg>
+        </div>
+        <h3>Any number of loops</h3>
+        <p>Abyssus lets you loop back for more depths before the final boss, so no two runs necessarily have the
+        same number of floors. A fixed split list can't represent that ahead of time — floor 3 or floor 30,
+        Abyssplit splits the same way.</p>
+        <span class="none-tag">Nothing to reconfigure between runs</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="section-head">
+      <div class="kicker">Feature by feature</div>
+      <h2>What each tool actually does for Abyssus</h2>
+      <p>Being fair to LiveSplit where it's fair: a few of these are possible with a custom ASL autosplitter
+      script — none currently exists for this game.</p>
+    </div>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th class="col-tool">Feature</th>
+            <th class="col-tool">LiveSplit</th>
+            <th class="col-tool col-abyssplit">Abyssplit</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="group-row"><td colspan="3">How splits happen</td></tr>
+          <tr class="feature-row">
+            <td class="feature-name">Split detection</td>
+            <td class="cell-value"><span class="pill workaround"><span class="dot"></span>Hotkey press, or a custom autosplitter (none exists)</span></td>
+            <td class="cell-value"><span class="pill good"><span class="dot"></span>Reads the game's own memory every ~20ms</span></td>
+          </tr>
+          <tr class="feature-row">
+            <td class="feature-name">Any number of loops per run</td>
+            <td class="cell-value"><span class="pill none"><span class="dot"></span>No — split list is fixed before the run starts</span></td>
+            <td class="cell-value"><span class="pill good"><span class="dot"></span>Splits adapt live to however many depths you dive</span></td>
+          </tr>
+          <tr class="feature-row">
+            <td class="feature-name">Room-by-room detail</td>
+            <td class="cell-value"><span class="pill none"><span class="dot"></span>Not built in</span></td>
+            <td class="cell-value"><span class="pill good"><span class="dot"></span>Optional, per floor</span></td>
+          </tr>
+
+          <tr class="group-row"><td colspan="3">Timing</td></tr>
+          <tr class="feature-row">
+            <td class="feature-name">Real-time (IGT)</td>
+            <td class="cell-value"><span class="pill good"><span class="dot"></span>Built in</span></td>
+            <td class="cell-value"><span class="pill good"><span class="dot"></span>Built in</span></td>
+          </tr>
+          <tr class="feature-row">
+            <td class="feature-name">Load-removal</td>
+            <td class="cell-value"><span class="pill workaround"><span class="dot"></span>Possible via a custom autosplitter (none exists)</span></td>
+            <td class="cell-value"><span class="pill good"><span class="dot"></span>Built in</span></td>
+          </tr>
+          <tr class="feature-row">
+            <td class="feature-name">Cutscene-free time</td>
+            <td class="cell-value"><span class="pill none"><span class="dot"></span>Not supported — forced cutscenes count against you</span></td>
+            <td class="cell-value"><span class="pill good"><span class="dot"></span>Built in, detected live</span></td>
+          </tr>
+
+          <tr class="group-row"><td colspan="3">Personal bests &amp; history</td></tr>
+          <tr class="feature-row">
+            <td class="feature-name">PBs per category &amp; player count</td>
+            <td class="cell-value"><span class="pill workaround"><span class="dot"></span>One splits file per combination, managed by hand</span></td>
+            <td class="cell-value"><span class="pill good"><span class="dot"></span>Automatic</span></td>
+          </tr>
+          <tr class="feature-row">
+            <td class="feature-name">Every attempt saved, finished or not</td>
+            <td class="cell-value"><span class="pill none"><span class="dot"></span>No — only the active comparison</span></td>
+            <td class="cell-value"><span class="pill good"><span class="dot"></span>Yes, permanently</span></td>
+          </tr>
+          <tr class="feature-row">
+            <td class="feature-name">Stats — consistency, PB progression</td>
+            <td class="cell-value"><span class="pill none"><span class="dot"></span>No</span></td>
+            <td class="cell-value"><span class="pill good"><span class="dot"></span>Built into the Stats tab</span></td>
+          </tr>
+          <tr class="feature-row">
+            <td class="feature-name">Crash recovery</td>
+            <td class="cell-value"><span class="pill workaround"><span class="dot"></span>Depends on autosave; not logged as its own attempt</span></td>
+            <td class="cell-value"><span class="pill good"><span class="dot"></span>Recovered as an incomplete run automatically</span></td>
+          </tr>
+
+          <tr class="group-row"><td colspan="3">Game awareness</td></tr>
+          <tr class="feature-row">
+            <td class="feature-name">Elite / Herald / boss ID per floor</td>
+            <td class="cell-value"><span class="pill none"><span class="dot"></span>No</span></td>
+            <td class="cell-value"><span class="pill good"><span class="dot"></span>Automatic, live-object detection</span></td>
+          </tr>
+          <tr class="feature-row">
+            <td class="feature-name">Party size (Solo/Duo/Trio/Quad)</td>
+            <td class="cell-value"><span class="pill workaround"><span class="dot"></span>Manual</span></td>
+            <td class="cell-value"><span class="pill roadmap"><span class="dot"></span>Manual today — auto-detect planned</span></td>
+          </tr>
+
+          <tr class="group-row"><td colspan="3">Sharing &amp; verification</td></tr>
+          <tr class="feature-row">
+            <td class="feature-name">Export one completed attempt</td>
+            <td class="cell-value"><span class="pill none"><span class="dot"></span>Not really — files represent an ongoing comparison</span></td>
+            <td class="cell-value"><span class="pill good"><span class="dot"></span><span class="mono">.abysplit</span> file, versioned</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="legend" style="margin-top:20px;">
+      <span><span class="dot" style="background:var(--toxic);box-shadow:0 0 6px rgba(199,255,61,0.5);"></span>Built in today</span>
+      <span><span class="dot" style="background:var(--warn);"></span>Manual / possible with a workaround</span>
+      <span><span class="dot" style="background:var(--text-dim);"></span>Not supported</span>
+      <span><span class="dot" style="background:var(--teal);"></span>Planned, not shipped</span>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="section-head">
+      <div class="kicker">What's next</div>
+      <h2>Coming in future releases</h2>
+      <p>Not built yet, not scheduled — but these go further than a general-purpose timer could follow even with
+      a custom script, since they need to know things about your specific run that only reading the game
+      live can tell you.</p>
+    </div>
+    <div class="roadmap-grid">
+      <div class="roadmap-card">
+        <span class="tag">Roadmap</span>
+        <h3>Auto-detect party size</h3>
+        <p>Set Solo/Duo/Trio/Quad automatically from the actual number of players in the party — nothing to
+        select before diving.</p>
+      </div>
+      <div class="roadmap-card">
+        <span class="tag">Roadmap</span>
+        <h3>Weapon% splits, per weapon</h3>
+        <p>A Weapon% category with splits recorded per weapon found, not per floor — its own tracking mode
+        entirely.</p>
+      </div>
+      <div class="roadmap-card">
+        <span class="tag">Roadmap</span>
+        <h3>Per-Deepwater-level tracking</h3>
+        <p>PBs and run history kept separate per Deepwater level, the same way category and player count
+        already are.</p>
+      </div>
+      <div class="roadmap-card">
+        <span class="tag">Roadmap</span>
+        <h3>Ability, blessing &amp; charm tracking</h3>
+        <p>Auto-detect a No Blessings run without self-reporting it, plus new Stats breakdowns like average
+        time by blessing.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="footer-grid">
+      <a class="brand" href="index.html">ABYSS<span>PLIT</span></a>
+      <div class="footer-links">
+        <a href="index.html">Home</a>
+        <a href="https://github.com/H0rizonfire/Abyssplit">GitHub</a>
+        <a href="https://github.com/H0rizonfire/Abyssplit/blob/main/USER_GUIDE.md">User Guide</a>
+        <a href="https://github.com/H0rizonfire/Abyssplit/blob/main/CHANGELOG.md">Changelog</a>
+      </div>
+    </div>
+    <div class="footer-legal">
+      Made for the Abyssus community, not a knock on LiveSplit — it's an excellent tool for the hundreds of games
+      it supports. Abyssplit is not affiliated with, endorsed by, or connected to LiveSplit in any way; feature
+      availability reflects what ships out of the box today.
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
