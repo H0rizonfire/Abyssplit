@@ -1,0 +1,417 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Abyssplit — a speedrun timer for Abyssus</title>
+<meta name="description" content="Abyssplit is a free speedrun timer and overlay for Abyssus, reading run state directly from the game's memory. No manual splitting required.">
+<link rel="icon" href="favicon.ico">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0A1210;
+    --surface:#17211D;
+    --surface-raised:#22302A;
+    --hairline:#3A4A44;
+    --brass:#C98F3F;
+    --brass-light:#E3B06A;
+    --brass-dim:#8A6430;
+    --teal:#3FD6C0;
+    --toxic:#C7FF3D;
+    --danger-text:#E36A6A;
+    --text:#ECE3D0;
+    --text-muted:#8A9994;
+    --text-dim:#56635E;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:'Inter',system-ui,-apple-system,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    overflow-x:hidden;
+  }
+  @media (prefers-reduced-motion: reduce){
+    html{scroll-behavior:auto;}
+    *{animation-duration:0.001ms !important; animation-iteration-count:1 !important; transition-duration:0.001ms !important;}
+  }
+
+  a{color:var(--brass-light);}
+  .mono{font-family:'JetBrains Mono',ui-monospace,Consolas,monospace;}
+
+  .wrap{max-width:1080px;margin:0 auto;padding:0 28px;}
+
+  /* ---------- nav ---------- */
+  nav{
+    position:sticky;top:0;z-index:20;
+    background:rgba(10,18,16,0.82);
+    backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--hairline);
+  }
+  nav .wrap{display:flex;align-items:center;justify-content:space-between;height:64px;}
+  .brand{font-family:'Rajdhani',sans-serif;font-weight:700;font-size:19px;letter-spacing:0.03em;color:var(--text);text-decoration:none;}
+  .brand span{color:var(--brass);}
+  nav .links{display:flex;gap:28px;align-items:center;}
+  nav .links a{color:var(--text-muted);text-decoration:none;font-size:14px;font-weight:500;transition:color 0.15s;}
+  nav .links a:hover{color:var(--brass-light);}
+  .nav-cta{
+    background:var(--brass);color:var(--bg) !important;
+    padding:8px 16px;border-radius:5px;font-weight:600 !important;
+  }
+  .nav-cta:hover{background:var(--brass-light);}
+  @media (max-width:720px){ nav .links a:not(.nav-cta){display:none;} }
+
+  /* ---------- hero ---------- */
+  .hero{position:relative;padding:88px 0 60px;overflow:hidden;}
+  #bubbles{position:absolute;inset:0;z-index:0;opacity:0.5;pointer-events:none;}
+  .hero::before{
+    content:"";position:absolute;inset:0;z-index:0;
+    background:radial-gradient(ellipse 700px 420px at 50% -10%, rgba(63,214,192,0.10), transparent 60%),
+               radial-gradient(ellipse 900px 500px at 85% 30%, rgba(201,143,63,0.08), transparent 55%);
+  }
+  .hero-inner{position:relative;z-index:1;text-align:center;}
+  .eyebrow{
+    display:inline-flex;align-items:center;gap:8px;
+    font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:0.08em;text-transform:uppercase;
+    color:var(--toxic);background:rgba(199,255,61,0.08);border:1px solid #3a4a2a;
+    padding:5px 12px;border-radius:20px;margin-bottom:24px;
+  }
+  .eyebrow::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--toxic);box-shadow:0 0 8px var(--toxic);}
+  h1.wordmark{
+    font-family:'Rajdhani',sans-serif;font-weight:700;
+    font-size:clamp(48px,9vw,92px);
+    letter-spacing:0.01em;line-height:0.95;
+    margin:0 0 20px;
+    color:var(--text);
+    text-wrap:balance;
+  }
+  h1.wordmark span{color:var(--brass);}
+  .tagline{
+    max-width:620px;margin:0 auto 8px;
+    font-size:clamp(17px,2.4vw,20px);line-height:1.55;color:var(--text-muted);
+    text-wrap:balance;
+  }
+  .subtagline{font-size:14px;color:var(--text-dim);margin:0 0 36px;}
+  .cta-row{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-bottom:64px;}
+  .btn{
+    display:inline-flex;align-items:center;gap:8px;
+    font-family:'Inter',sans-serif;font-weight:600;font-size:15px;
+    padding:14px 26px;border-radius:7px;text-decoration:none;
+    transition:transform 0.15s, background 0.15s, border-color 0.15s;
+    border:1px solid transparent;
+  }
+  .btn:hover{transform:translateY(-1px);}
+  .btn-primary{background:var(--brass);color:#12100A;}
+  .btn-primary:hover{background:var(--brass-light);}
+  .btn-secondary{background:var(--surface);color:var(--text);border-color:var(--hairline);}
+  .btn-secondary:hover{border-color:var(--brass-dim);color:var(--brass-light);}
+
+  .hero-shot{
+    position:relative;z-index:1;
+    max-width:340px;margin:0 auto;
+    border-radius:12px;
+    overflow:hidden;
+    border:1px solid var(--hairline);
+    box-shadow:0 30px 80px -20px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.02);
+  }
+  .hero-shot img{display:block;width:100%;}
+
+  /* ---------- sections ---------- */
+  section{padding:88px 0;}
+  .section-head{text-align:center;max-width:600px;margin:0 auto 52px;}
+  .kicker{
+    font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:0.12em;text-transform:uppercase;
+    color:var(--brass-light);margin-bottom:12px;
+  }
+  h2{
+    font-family:'Rajdhani',sans-serif;font-weight:700;font-size:clamp(28px,4vw,38px);
+    margin:0 0 14px;color:var(--text);text-wrap:balance;
+  }
+  .section-head p{color:var(--text-muted);font-size:16px;line-height:1.6;margin:0;}
+
+  /* features */
+  .features{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;}
+  @media (max-width:860px){.features{grid-template-columns:repeat(2,1fr);}}
+  @media (max-width:600px){.features{grid-template-columns:1fr;}}
+  .feature-card{
+    background:var(--surface);border:1px solid var(--hairline);border-radius:10px;
+    padding:26px 24px;
+  }
+  .feature-icon{
+    width:38px;height:38px;border-radius:8px;
+    background:var(--surface-raised);border:1px solid var(--hairline);
+    display:flex;align-items:center;justify-content:center;margin-bottom:16px;
+    color:var(--brass);
+  }
+  .feature-card h3{font-family:'Rajdhani',sans-serif;font-size:18px;font-weight:600;margin:0 0 8px;color:var(--text);}
+  .feature-card p{font-size:14px;line-height:1.6;color:var(--text-muted);margin:0;}
+
+  /* showcase (customization) */
+  .showcase{display:grid;grid-template-columns:1.1fr 0.9fr;gap:56px;align-items:center;}
+  @media (max-width:860px){.showcase{grid-template-columns:1fr;}}
+  .showcase-shot{
+    border-radius:10px;overflow:hidden;border:1px solid var(--hairline);
+    box-shadow:0 24px 60px -24px rgba(0,0,0,0.6);
+  }
+  .showcase-shot img{display:block;width:100%;}
+  .showcase-text .kicker{margin-bottom:10px;}
+  .showcase-text h2{text-align:left;}
+  .showcase-text p{color:var(--text-muted);font-size:15.5px;line-height:1.65;margin:0 0 22px;}
+  .check-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:12px;}
+  .check-list li{display:flex;gap:10px;font-size:14.5px;color:var(--text);align-items:flex-start;}
+  .check-list li::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--toxic);margin-top:7px;flex:none;}
+
+  /* install */
+  .install-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+  @media (max-width:700px){.install-grid{grid-template-columns:1fr;}}
+  .install-card{
+    background:var(--surface);border:1px solid var(--hairline);border-radius:10px;padding:28px;
+    display:flex;flex-direction:column;
+  }
+  .install-card .tag{
+    align-self:flex-start;
+    font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.06em;text-transform:uppercase;
+    color:var(--brass-light);background:rgba(201,143,63,0.1);border:1px solid var(--brass-dim);
+    padding:3px 9px;border-radius:4px;margin-bottom:14px;
+  }
+  .install-card h3{font-family:'Rajdhani',sans-serif;font-size:22px;margin:0 0 8px;}
+  .install-card p{color:var(--text-muted);font-size:14.5px;line-height:1.6;margin:0 0 20px;flex:1;}
+  .smartscreen-note{
+    display:flex;gap:12px;background:var(--surface);border:1px solid var(--hairline);border-left:3px solid var(--brass);
+    border-radius:6px;padding:16px 18px;margin-top:36px;font-size:14px;color:var(--text-muted);line-height:1.6;
+  }
+  .smartscreen-note strong{color:var(--text);}
+
+  /* footer */
+  footer{border-top:1px solid var(--hairline);padding:48px 0 40px;}
+  .footer-grid{display:flex;justify-content:space-between;flex-wrap:wrap;gap:28px;margin-bottom:32px;}
+  .footer-links{display:flex;gap:24px;flex-wrap:wrap;}
+  .footer-links a{color:var(--text-muted);text-decoration:none;font-size:14px;}
+  .footer-links a:hover{color:var(--brass-light);}
+  .coffee-link{
+    display:inline-flex;align-items:center;gap:8px;color:var(--toxic) !important;font-weight:600;
+  }
+  .footer-legal{font-size:12.5px;color:var(--text-dim);line-height:1.7;border-top:1px solid var(--hairline);padding-top:24px;}
+  .footer-legal a{color:var(--text-dim);text-decoration:underline;}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <a class="brand" href="#top">ABYSS<span>PLIT</span></a>
+    <div class="links">
+      <a href="#features">Features</a>
+      <a href="#install">Install</a>
+      <a href="https://github.com/H0rizonfire/Abyssplit/blob/main/USER_GUIDE.md">User Guide</a>
+      <a href="https://github.com/H0rizonfire/Abyssplit" class="nav-cta">GitHub</a>
+    </div>
+  </div>
+</nav>
+
+<div id="top" class="hero">
+  <canvas id="bubbles"></canvas>
+  <div class="wrap hero-inner">
+    <span class="eyebrow">For Abyssus</span>
+    <h1 class="wordmark">ABYSS<span>PLIT</span></h1>
+    <p class="tagline">A speedrun timer and overlay that reads run state directly from Abyssus's own memory. No manual splitting, no guesswork.</p>
+    <p class="subtagline">Free and open source · PolyForm Noncommercial License</p>
+    <div class="cta-row">
+      <a class="btn btn-primary" href="https://github.com/H0rizonfire/Abyssplit/releases/latest">Download for Windows</a>
+      <a class="btn btn-secondary" href="https://github.com/H0rizonfire/Abyssplit">View on GitHub</a>
+    </div>
+    <div class="hero-shot">
+      <img src="screenshots/overlay-preview.png" alt="Abyssplit overlay showing a live split for Sunken Gardens, with per-depth times and deltas">
+    </div>
+  </div>
+</div>
+
+<section id="features">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="kicker">Everything a runner needs</div>
+      <h2>One tool, the whole run</h2>
+      <p>Attach it, play, and everything else — timing, splits, history, sharing — happens on its own.</p>
+    </div>
+    <div class="features">
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+        </div>
+        <h3>Three timers, one truth</h3>
+        <p>IGT, Load-Free, and Load+Cutscene-Free run side by side — the last one is what splits and personal bests are actually built on.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M18 17V9M13 17V5M8 17v-3"/></svg>
+        </div>
+        <h3>Live splits &amp; PBs</h3>
+        <p>Automatic floor-by-floor and room-by-room breakdown, with a running +/- delta against whichever comparison you pick.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M8 2v4M16 2v4"/></svg>
+        </div>
+        <h3>Full run history &amp; stats</h3>
+        <p>Every attempt, finished or not. Per-location averages, a consistency figure, and how your PB has progressed over time.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 10.5l6.8-3.9M8.6 13.5l6.8 3.9"/></svg>
+        </div>
+        <h3>Share your splits</h3>
+        <p>Export any attempt as an <span class="mono">.abysplit</span> file to race a friend, or attach it when submitting a run for record verification.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z"/></svg>
+        </div>
+        <h3>Built for verification</h3>
+        <p>The app version shows right on the overlay and in every exported file, so anyone checking a submission knows exactly what produced it.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M9 22v-4h6v4"/></svg>
+        </div>
+        <h3>Stays out of the way</h3>
+        <p>Minimizes to the tray, can launch at sign-in, and the overlay is click-through by default — it's there when you glance at it, invisible otherwise.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="customize" style="background:var(--surface);border-top:1px solid var(--hairline);border-bottom:1px solid var(--hairline);">
+  <div class="wrap showcase">
+    <div class="showcase-shot">
+      <img src="screenshots/overlay-settings.png" alt="Abyssplit's overlay appearance settings, showing opacity, size, and styling sliders">
+    </div>
+    <div class="showcase-text">
+      <div class="kicker">Make it yours</div>
+      <h2>An overlay that fits your setup</h2>
+      <p>Every visual detail is adjustable from the Configurator — no config files to hand-edit.</p>
+      <ul class="check-list">
+        <li>Background opacity, overall scale, and an optional custom background image</li>
+        <li>Independent font size and color for the Title, Biome, Depth, and Floor rows</li>
+        <li>Choose how much detail shows — nothing, one row per floor, or a full room-by-room breakdown</li>
+        <li>Collapse finished sections, scroll, or let the list grow — your call</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section id="install">
+  <div class="wrap">
+    <div class="section-head">
+      <div class="kicker">Get started</div>
+      <h2>Two ways to run it</h2>
+      <p>Both come from the same build — pick whichever fits how you use your PC.</p>
+    </div>
+    <div class="install-grid">
+      <div class="install-card">
+        <span class="tag">Recommended</span>
+        <h3>Installer</h3>
+        <p>Installs to your user profile — no admin rights needed — with a Start Menu entry and an optional desktop shortcut. Easiest way to keep it up to date.</p>
+        <a class="btn btn-primary" href="https://github.com/H0rizonfire/Abyssplit/releases/latest">Download Installer</a>
+      </div>
+      <div class="install-card">
+        <span class="tag">No install</span>
+        <h3>Portable</h3>
+        <p>A single self-contained <span class="mono">.exe</span>. Drop it anywhere — a USB drive, a shared PC — and run it directly.</p>
+        <a class="btn btn-secondary" href="https://github.com/H0rizonfire/Abyssplit/releases/latest">Download Portable</a>
+      </div>
+    </div>
+    <div class="smartscreen-note">
+      <span>&#9888;</span>
+      <span><strong>Windows may show a SmartScreen warning</strong> the first time you run either one — expected for a small, free tool without a paid code-signing certificate, not a sign anything is wrong. Click <strong>More info</strong>, then <strong>Run anyway</strong>.</span>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="footer-grid">
+      <a class="brand" href="#top">ABYSS<span>PLIT</span></a>
+      <div class="footer-links">
+        <a href="https://github.com/H0rizonfire/Abyssplit">GitHub</a>
+        <a href="https://github.com/H0rizonfire/Abyssplit/blob/main/USER_GUIDE.md">User Guide</a>
+        <a href="https://github.com/H0rizonfire/Abyssplit/issues">Report an Issue</a>
+        <a href="https://github.com/H0rizonfire/Abyssplit/blob/main/CONTRIBUTING.md">Contributing</a>
+        <a class="coffee-link" href="https://buymeacoffee.com/h0rizonfire">Buy me a coffee</a>
+      </div>
+    </div>
+    <div class="footer-legal">
+      Abyssplit is free to use, no strings attached, licensed under <a href="https://github.com/H0rizonfire/Abyssplit/blob/main/LICENSE.md">PolyForm Noncommercial 1.0.0</a>.
+      Not affiliated with, endorsed by, or connected to the developers or publisher of Abyssus in any way.
+    </div>
+  </div>
+</footer>
+
+<script>
+(function(){
+  var canvas = document.getElementById('bubbles');
+  if (!canvas) return;
+  var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var ctx = canvas.getContext('2d');
+  var hero = canvas.parentElement;
+  var particles = [];
+  var w, h;
+
+  function resize(){
+    w = hero.offsetWidth;
+    h = hero.offsetHeight;
+    canvas.width = w;
+    canvas.height = h;
+  }
+
+  function makeParticle(){
+    return {
+      x: Math.random() * w,
+      y: h + Math.random() * 40,
+      r: 1 + Math.random() * 2.5,
+      speed: 0.25 + Math.random() * 0.6,
+      drift: (Math.random() - 0.5) * 0.3,
+      alpha: 0.15 + Math.random() * 0.35
+    };
+  }
+
+  function init(){
+    resize();
+    var count = Math.min(46, Math.floor(w / 24));
+    particles = [];
+    for (var i = 0; i < count; i++){
+      var p = makeParticle();
+      p.y = Math.random() * h;
+      particles.push(p);
+    }
+  }
+
+  function tick(){
+    ctx.clearRect(0, 0, w, h);
+    for (var i = 0; i < particles.length; i++){
+      var p = particles[i];
+      p.y -= p.speed;
+      p.x += p.drift;
+      if (p.y < -10){
+        particles[i] = makeParticle();
+        continue;
+      }
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(63,214,192,' + p.alpha + ')';
+      ctx.fill();
+    }
+    requestAnimationFrame(tick);
+  }
+
+  window.addEventListener('resize', resize);
+  init();
+  if (!reduceMotion) requestAnimationFrame(tick);
+})();
+</script>
+
+</body>
+</html>
