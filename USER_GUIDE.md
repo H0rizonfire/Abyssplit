@@ -9,6 +9,12 @@ shown by the **Attached** badge next to the category picker. The overlay appears
 game once attached; the Configurator window (this one) is where you manage history, stats, and
 settings.
 
+**Abyssus needs to be running in Borderless or Windowed mode, not exclusive Fullscreen.**
+Fullscreen mode bypasses Windows' own compositor, which hides every overlay — not just this one,
+the same is true of Discord/Steam overlays — behind the game instead of on top of it. If the
+overlay isn't showing up, this is almost always why; switch Abyssus's Window Mode setting and it
+should appear immediately.
+
 On first launch you'll be asked to accept the Terms of Use — a one-time step per version.
 Windows may also show a SmartScreen warning the first time you run the installer or portable exe
 — expected for an unsigned app, not a sign anything is wrong; click **More info**, then **Run

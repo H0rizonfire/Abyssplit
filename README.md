@@ -77,6 +77,11 @@ race against a file someone sent you, use **Import Split File** on the Settings 
 The in-game overlay is a borderless, click-through, always-on-top window, fully customizable from
 the Configurator's **Overlay** tab:
 
+> **Requires Abyssus to be in Borderless or Windowed mode.** Exclusive Fullscreen bypasses
+> Windows' compositor, which hides every overlay behind the game — not a bug specific to
+> Abyssplit, the same applies to Discord/Steam overlays. Switch Abyssus's Window Mode setting if
+> the overlay isn't appearing.
+
 - **Appearance** — background opacity, overall scale, and an optional custom background image.
 - **Section styling** — independent font size and color for the Biome/Depth/Floor rows, and a
   toggle for whether times get their own background chip.
