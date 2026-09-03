@@ -7,7 +7,7 @@ directly out of the game's own memory — no manual splitting required. It sits 
 as a separate window: a small always-on-top overlay for live timing, and a configurator window for
 history, stats, and settings.
 
-**Status:** early — versioning starts at `0.1.0`. Not yet publicly released.
+**Status:** early — versioning starts at `0.1.0`. Not in official use.
 
 **Not affiliated with Abyssus's developer or publisher.** Using any third-party tool with an
 online game is done at your own risk — see [Terms of Use](#terms-of-use--license) below, and check
