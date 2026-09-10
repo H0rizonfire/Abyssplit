@@ -14,22 +14,24 @@ public sealed class TimerEngine : INotifyPropertyChanged, IDisposable
     private readonly object _tickLock = new();
     private readonly Dispatcher _uiDispatcher = Dispatcher.CurrentDispatcher;
 
-    private readonly GameProcess _process = new();
-    private readonly AbyssusStatsReader _reader;
+    internal Dispatcher UiDispatcherForTests => _uiDispatcher;
+
+    private readonly IGameSource _gameSource;
     private readonly AdjustedTimer _adjustedTimer = new();
     private readonly AdjustedTimer _loadAndCutsceneFreeTimer = new();
     private readonly RunSession _session = new();
     private readonly PersonalBests _personalBests;
     private readonly RunHistory _runHistory;
+    private readonly RunRecovery _runRecovery;
     private readonly List<(FloorSplit Split, bool IsNewBest, bool IsBossRoom, string? EliteName, bool IsRoyalAbyssContent, bool IsTorakaContent, IReadOnlyList<string?> RoomHeraldNames)> _annotatedFloorSplits = new();
+
+    private RunRecoveryData? _currentRunRecovery;
 
     private readonly Dictionary<string, (int Attempts, int Completed)> _sessionStats = new();
 
-    private CutsceneTracker? _cutsceneTracker;
-    private HeraldTracker? _heraldTracker;
-    private EliteTracker? _eliteTracker;
-    private NamePool? _namePool;
     private AbyssusStats _lastStats = AbyssusStats.Empty;
+
+    private string? _lastCutsceneAssetName;
     private bool _currentRunCompleted;
 
     private bool _wasAttachedForLog;
@@ -119,44 +121,97 @@ public sealed class TimerEngine : INotifyPropertyChanged, IDisposable
         private set => SetField(ref _latestVersionText, value);
     }
 
-    public async Task CheckForUpdateAsync()
+    public async Task<bool?> CheckForUpdateAsync()
     {
         var latest = await UpdateChecker.GetLatestVersionAsync();
         if (latest is null)
-            return;
+            return null;
 
         var currentVersionText = AppVersionText.TrimStart('v', 'V');
         if (!Version.TryParse(latest, out var latestVersion) || !Version.TryParse(currentVersionText, out var currentVersion))
-            return;
+            return null;
 
         if (latestVersion > currentVersion)
         {
             LatestVersionText = latest;
             IsUpdateAvailable = true;
+            return true;
+        }
+
+        return false;
+    }
+
+    private bool _isPossibleGameMismatch;
+    public bool IsPossibleGameMismatch
+    {
+        get => _isPossibleGameMismatch;
+        private set => SetField(ref _isPossibleGameMismatch, value);
+    }
+
+    private string? _gameMismatchDetailText;
+    public string? GameMismatchDetailText
+    {
+        get => _gameMismatchDetailText;
+        private set => SetField(ref _gameMismatchDetailText, value);
+    }
+
+    private bool _hasLoggedGameMismatchThisAttach;
+    private int _consecutiveImplausibleTicks;
+
+    private const int ImplausibleTicksThreshold = 3;
+
+    private void ReportPossibleGameMismatch(string reason)
+    {
+        IsPossibleGameMismatch = true;
+        GameMismatchDetailText = reason;
+
+        if (!_hasLoggedGameMismatchThisAttach)
+        {
+            AppLog.Log($"[Possible mismatch] {reason}");
+            _hasLoggedGameMismatchThisAttach = true;
         }
     }
 
-    public TimerEngine()
+    public TimerEngine(IGameSource? gameSource = null, string? dataDirectory = null)
     {
-        _reader = new AbyssusStatsReader(_process);
+        _gameSource = gameSource ?? new LiveGameSource();
 
-        var pbPath = Path.Combine(
+        var dataDir = dataDirectory ?? Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "AbyssusTimer",
-            "personal_bests.json");
+            "AbyssusTimer");
+
+        var pbPath = Path.Combine(dataDir, "personal_bests.json");
         _personalBests = new PersonalBests(pbPath, $"{_activeCategory}|{_activePlayerCount}");
 
-        var historyPath = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "AbyssusTimer",
-            "run_history.json");
+        var historyPath = Path.Combine(dataDir, "run_history.json");
         _runHistory = new RunHistory(historyPath, $"{_activeCategory}|{_activePlayerCount}");
+
+        var recoveryPath = Path.Combine(dataDir, "run_recovery.json");
+        _runRecovery = new RunRecovery(recoveryPath);
+
+        var recovered = _runRecovery.Load();
+        if (recovered is not null)
+        {
+            _runHistory.SetActiveCategory($"{recovered.Category}|{recovered.PlayerCount}");
+            _runHistory.RecordAttempt(new RunAttempt(recovered.Timestamp, Completed: false, recovered.FloorSegments.Values.Sum(), recovered.FloorSegments));
+            _runHistory.SetActiveCategory($"{_activeCategory}|{_activePlayerCount}");
+            _runRecovery.Clear();
+            AppLog.Log($"Recovered an interrupted run — {recovered.Category}|{recovered.PlayerCount}, {recovered.FloorSegments.Count} floor(s).");
+        }
 
         _session.RunStarted += () =>
         {
             AppLog.Log($"Run started — {_activeCategory}|{_activePlayerCount}");
             _annotatedFloorSplits.Clear();
             _currentRunCompleted = false;
+
+            _currentRunRecovery = new RunRecoveryData
+            {
+                Timestamp = DateTime.Now,
+                Category = _activeCategory.ToString(),
+                PlayerCount = _activePlayerCount.ToString(),
+            };
+            _runRecovery.Save(_currentRunRecovery);
 
             _lastObservedLevelReached = int.MinValue;
             _currentDepthClassified = false;
@@ -182,6 +237,12 @@ public sealed class TimerEngine : INotifyPropertyChanged, IDisposable
         };
         _session.FloorSplitOccurred += split =>
         {
+            if (_currentRunRecovery is not null)
+            {
+                _currentRunRecovery.FloorSegments[split.FloorNumber] = split.SegmentTime;
+                _runRecovery.Save(_currentRunRecovery);
+            }
+
             var isNewBest = _personalBests.TryRecordFloorSegment(split.FloorNumber, split.SegmentTime);
             if (isNewBest)
                 OnPropertyChanged(nameof(SumOfBestText));
@@ -196,9 +257,7 @@ public sealed class TimerEngine : INotifyPropertyChanged, IDisposable
         _session.RunCompleted += _ =>
         {
             var isTrueEndingTransition = _currentDepthIsTorakaContent
-                && _cutsceneTracker is not null && _namePool is not null
-                && _cutsceneTracker.TryGetCurrentSequenceAssetName(_namePool, out var cutsceneName)
-                && string.Equals(cutsceneName, TorakaTrueEndingTransitionCutscene, StringComparison.OrdinalIgnoreCase);
+                && string.Equals(_lastCutsceneAssetName, TorakaTrueEndingTransitionCutscene, StringComparison.OrdinalIgnoreCase);
 
             if (isTrueEndingTransition)
                 _hasDetectedTorakaSecretPhase = true;
@@ -209,8 +268,11 @@ public sealed class TimerEngine : INotifyPropertyChanged, IDisposable
         {
             AppLog.Log($"Run ended — {_activeCategory}|{_activePlayerCount} completed={_currentRunCompleted} finalTime={finalTime:F2}s");
 
-            if (_currentRunCompleted)
-                _personalBests.TryRecordRunTime(finalTime);
+            _currentRunRecovery = null;
+            _runRecovery.Clear();
+
+            if (_currentRunCompleted && _personalBests.TryRecordRunTime(finalTime) && PlaySoundOnNewPb)
+                OnNewPbSound();
             PreviousRunWasSuccessful = _currentRunCompleted;
             PreviousRunTime = finalTime;
             OnPropertyChanged(nameof(BestRunTimeText));
@@ -249,6 +311,10 @@ public sealed class TimerEngine : INotifyPropertyChanged, IDisposable
 
     public bool PauseStopsTime { get; set; }
     public bool AutoResetOnLobbyReturn { get; set; } = true;
+
+    public bool PlaySoundOnNewPb { get; set; } = true;
+
+    internal Action OnNewPbSound { get; set; } = () => System.Media.SystemSounds.Asterisk.Play();
 
     public bool ShowRawTimer { get => _showRawTimer; set => SetField(ref _showRawTimer, value); }
     private bool _showRawTimer = true;
@@ -517,6 +583,10 @@ public sealed class TimerEngine : INotifyPropertyChanged, IDisposable
     {
         OnPropertyChanged(nameof(StatsPerLocationRows));
         OnPropertyChanged(nameof(StatsPbProgressionRows));
+        OnPropertyChanged(nameof(StatsPbProgressionChartPoints));
+        OnPropertyChanged(nameof(StatsPbProgressionChartMarkers));
+        OnPropertyChanged(nameof(StatsPbProgressionChartMaxTimeText));
+        OnPropertyChanged(nameof(StatsPbProgressionChartMinTimeText));
         OnPropertyChanged(nameof(StatsAttemptsReachedRows));
         OnPropertyChanged(nameof(StatsLoadCutsceneOverheadText));
     }
@@ -579,13 +649,54 @@ public sealed class TimerEngine : INotifyPropertyChanged, IDisposable
                     continue;
 
                 var improvementText = runningBest is { } previousBest ? $"-{FormatTimer(previousBest - attempt.FinalTime)}" : null;
-                rows.Add(new PbMilestoneRow(attempt.Timestamp.ToString("g"), FormatTimer(attempt.FinalTime), improvementText));
+                rows.Add(new PbMilestoneRow(attempt.Timestamp.ToString("g"), FormatTimer(attempt.FinalTime), improvementText, attempt.FinalTime));
                 runningBest = attempt.FinalTime;
             }
 
             return rows;
         }
     }
+
+    private const double PbChartWidth = 300;
+    private const double PbChartHeight = 60;
+
+    private List<PbChartMarker> ComputePbChartMarkers()
+    {
+        var rows = StatsPbProgressionRows;
+        var markers = new List<PbChartMarker>();
+        if (rows.Count < 2)
+            return markers;
+
+        var min = rows.Min(r => r.FinalTimeSeconds);
+        var max = rows.Max(r => r.FinalTimeSeconds);
+        var range = max - min;
+
+        for (var i = 0; i < rows.Count; i++)
+        {
+            var x = PbChartWidth * i / (rows.Count - 1);
+            var t = range > 0 ? (rows[i].FinalTimeSeconds - min) / range : 0.5;
+            var y = PbChartHeight * (1 - t);
+            markers.Add(new PbChartMarker(x, y, rows[i].DateText, rows[i].TimeText));
+        }
+
+        return markers;
+    }
+
+    public System.Windows.Media.PointCollection StatsPbProgressionChartPoints
+    {
+        get
+        {
+            var points = new System.Windows.Media.PointCollection();
+            foreach (var marker in ComputePbChartMarkers())
+                points.Add(new System.Windows.Point(marker.X, marker.Y));
+            return points;
+        }
+    }
+
+    public IReadOnlyList<PbChartMarker> StatsPbProgressionChartMarkers => ComputePbChartMarkers();
+
+    public string StatsPbProgressionChartMaxTimeText => FormatTimer(StatsPbProgressionRows.Count > 0 ? StatsPbProgressionRows.Max(r => r.FinalTimeSeconds) : 0f);
+    public string StatsPbProgressionChartMinTimeText => FormatTimer(StatsPbProgressionRows.Count > 0 ? StatsPbProgressionRows.Min(r => r.FinalTimeSeconds) : 0f);
 
     public IReadOnlyList<AttemptsReachedRow> StatsAttemptsReachedRows
     {
@@ -693,6 +804,24 @@ public sealed class TimerEngine : INotifyPropertyChanged, IDisposable
             attempt.LoadFreeFinalTime);
 
         File.WriteAllText(filePath, System.Text.Json.JsonSerializer.Serialize(file, new System.Text.Json.JsonSerializerOptions { WriteIndented = true }));
+    }
+
+    public string BuildSplitsSummaryText(int historicalRunIndex)
+    {
+        var attempts = _runHistory.GetAttempts();
+        if (historicalRunIndex < 0 || historicalRunIndex >= attempts.Count)
+            throw new ArgumentOutOfRangeException(nameof(historicalRunIndex));
+
+        var attempt = attempts[historicalRunIndex];
+        var lines = new List<string>
+        {
+            $"Abyssplit — {ActiveCategory.DisplayName()} {ActivePlayerCount} — {FormatTimer(attempt.FinalTime)} ({(attempt.Completed ? "Completed" : "Incomplete")})",
+        };
+        lines.AddRange(attempt.FloorSegments
+            .OrderBy(kv => kv.Key)
+            .Select(kv => $"Depth {DisplayDepthNumber(kv.Key)}: {FormatTimer(kv.Value)}"));
+
+        return string.Join(Environment.NewLine, lines);
     }
 
     private SharedSplitFile? _importedSplitFile;
@@ -918,8 +1047,49 @@ public sealed class TimerEngine : INotifyPropertyChanged, IDisposable
         _ => RawRunTimeText,
     };
 
-    public bool IsAttached { get => _isAttached; private set => SetField(ref _isAttached, value); }
+    public bool IsAttached
+    {
+        get => _isAttached;
+        private set
+        {
+            if (_isAttached == value)
+                return;
+            _isAttached = value;
+            OnPropertyChanged(nameof(IsAttached));
+            OnPropertyChanged(nameof(ShouldOverlayBeVisible));
+        }
+    }
     private bool _isAttached;
+
+    public bool IsConfiguratorVisible
+    {
+        get => _isConfiguratorVisible;
+        set
+        {
+            if (_isConfiguratorVisible == value)
+                return;
+            _isConfiguratorVisible = value;
+            OnPropertyChanged(nameof(IsConfiguratorVisible));
+            OnPropertyChanged(nameof(ShouldOverlayBeVisible));
+        }
+    }
+    private bool _isConfiguratorVisible;
+
+    public bool AlwaysShowOverlay
+    {
+        get => _alwaysShowOverlay;
+        set
+        {
+            if (_alwaysShowOverlay == value)
+                return;
+            _alwaysShowOverlay = value;
+            OnPropertyChanged(nameof(AlwaysShowOverlay));
+            OnPropertyChanged(nameof(ShouldOverlayBeVisible));
+        }
+    }
+    private bool _alwaysShowOverlay;
+
+    public bool ShouldOverlayBeVisible => AlwaysShowOverlay || IsAttached || IsConfiguratorVisible;
 
     public bool IsInRun { get => _isInRun; private set => SetField(ref _isInRun, value); }
     private bool _isInRun;
@@ -1024,11 +1194,9 @@ public sealed class TimerEngine : INotifyPropertyChanged, IDisposable
 
         lock (_tickLock)
         {
-        if (!_process.IsAttached || !_process.IsProcessAlive())
+        if (!_gameSource.IsAttached || !_gameSource.IsProcessAlive())
         {
-            _cutsceneTracker?.Stop();
-            _heraldTracker?.Stop();
-            _eliteTracker?.Stop();
+            _gameSource.OnDetached();
 
             if (_wasAttachedForLog)
             {
@@ -1036,7 +1204,7 @@ public sealed class TimerEngine : INotifyPropertyChanged, IDisposable
                 _wasAttachedForLog = false;
             }
 
-            if (!_process.TryAttach(GameOffsets.ProcessName))
+            if (!_gameSource.TryAttach())
             {
                 _adjustedTimer.Reset();
                 _loadAndCutsceneFreeTimer.Reset();
@@ -1044,18 +1212,19 @@ public sealed class TimerEngine : INotifyPropertyChanged, IDisposable
                 return;
             }
 
-            var namePool = new NamePool(_process, _process.ModuleBase + GameOffsets.GNames);
-            _namePool = namePool;
-            var objectArray = new GUObjectArrayReader(_process, _process.ModuleBase + GameOffsets.GUObjectArray);
-            _cutsceneTracker = new CutsceneTracker(_process, namePool, objectArray);
-            _cutsceneTracker.Start();
-            _heraldTracker = new HeraldTracker(namePool, objectArray);
-            _heraldTracker.Start();
-            _eliteTracker = new EliteTracker(namePool, objectArray);
-            _eliteTracker.Start();
-
             AppLog.Log("Attached to Abyssus.");
             _wasAttachedForLog = true;
+
+            IsPossibleGameMismatch = false;
+            GameMismatchDetailText = null;
+            _hasLoggedGameMismatchThisAttach = false;
+            _consecutiveImplausibleTicks = 0;
+
+            if (GameVersionChecker.TryCheckVersion(_gameSource.ExecutablePath, GameOffsets.LastVerifiedGameVersion) == false)
+            {
+                ReportPossibleGameMismatch(
+                    $"Attached game's version doesn't match the last-verified build ({GameOffsets.LastVerifiedGameVersion}) — Abyssus may have updated.");
+            }
         }
 
         _uiDispatcher.BeginInvoke(() => IsAttached = true);
@@ -1070,11 +1239,22 @@ public sealed class TimerEngine : INotifyPropertyChanged, IDisposable
         try
         {
             var statsReadStopwatch = Stopwatch.StartNew();
-            if (!_reader.TryReadStats(out var stats))
+            if (!_gameSource.TryReadFrame(out var frame))
                 return;
             statsReadMs = statsReadStopwatch.Elapsed.TotalMilliseconds;
 
+            var stats = frame.Stats;
             _lastStats = stats;
+            _lastCutsceneAssetName = frame.CurrentCutsceneAssetName;
+
+            if (AbyssusStatsValidator.TryValidate(stats, out var implausibleReason))
+            {
+                _consecutiveImplausibleTicks = 0;
+            }
+            else if (++_consecutiveImplausibleTicks >= ImplausibleTicksThreshold)
+            {
+                ReportPossibleGameMismatch($"Implausible game data read ({implausibleReason}) — possible memory-offset mismatch after a game update.");
+            }
 
 #if TRUSTED_BUILD
             var joinedLevelIds = string.Join(" | ", stats.CurrentLevelIds);
@@ -1093,8 +1273,8 @@ public sealed class TimerEngine : INotifyPropertyChanged, IDisposable
                 DebugConsole.Log($"[RoomDiag] IsInRun={stats.IsInRun} Depth={stats.LevelReached} Room={stats.RoomReached} RunSuccessful={stats.RunSuccessful}");
             }
 
-            var currentEliteReading = _eliteTracker?.CurrentEliteName;
-            var currentHeraldReading = _heraldTracker?.CurrentHeraldName;
+            var currentEliteReading = frame.CurrentEliteName;
+            var currentHeraldReading = frame.CurrentHeraldName;
             if (currentEliteReading != _lastDumpedEliteName || currentHeraldReading != _lastDumpedHeraldName)
             {
                 _lastDumpedEliteName = currentEliteReading;
@@ -1104,9 +1284,7 @@ public sealed class TimerEngine : INotifyPropertyChanged, IDisposable
 #endif
 
             cutsceneCheckStopwatch.Restart();
-            string? currentCutsceneAssetName = null;
-            if (_cutsceneTracker is not null && _namePool is not null && _cutsceneTracker.TryGetCurrentSequenceAssetName(_namePool, out var cutsceneAssetNameValue))
-                currentCutsceneAssetName = cutsceneAssetNameValue;
+            var currentCutsceneAssetName = frame.CurrentCutsceneAssetName;
             cutsceneCheckMs += cutsceneCheckStopwatch.Elapsed.TotalMilliseconds;
 #if TRUSTED_BUILD
             if (currentCutsceneAssetName != _lastDumpedCutsceneAssetName)
@@ -1133,7 +1311,7 @@ public sealed class TimerEngine : INotifyPropertyChanged, IDisposable
             _adjustedTimer.Update(stats.RunTime, stats.IsInRun, stats.IsLoading, stats.IsLoading || pauseExclusion || notInRunExclusion || _currentRunCompleted || notYetSeenLobbyExclusion, countThroughStall);
 
             cutsceneCheckStopwatch.Restart();
-            var isCutscenePlaying = _cutsceneTracker?.IsCutscenePlaying() ?? false;
+            var isCutscenePlaying = frame.IsCutscenePlaying;
             cutsceneCheckMs += cutsceneCheckStopwatch.Elapsed.TotalMilliseconds;
             _loadAndCutsceneFreeTimer.Update(stats.RunTime, stats.IsInRun, stats.IsLoading, stats.IsLoading || isCutscenePlaying || pauseExclusion || notInRunExclusion || _currentRunCompleted || notYetSeenLobbyExclusion, countThroughStall);
 
@@ -1159,7 +1337,7 @@ public sealed class TimerEngine : INotifyPropertyChanged, IDisposable
                 _hasEnteredRoyalAbyss = true;
 
             if (_currentDepthEliteName is null)
-                _currentDepthEliteName = _eliteTracker?.CurrentEliteName;
+                _currentDepthEliteName = frame.CurrentEliteName;
 
             if (!_currentDepthClassified && LevelContext.TryExtractBossIdentifier(stats.CurrentLevelIds, out var bossIdentifier))
             {
@@ -1189,7 +1367,7 @@ public sealed class TimerEngine : INotifyPropertyChanged, IDisposable
             }
             else if (_currentRoomHeraldName is null)
             {
-                _currentRoomHeraldName = _heraldTracker?.CurrentHeraldName;
+                _currentRoomHeraldName = frame.CurrentHeraldName;
             }
 
             var currentBiomeName = _currentDepthBossDisplayName ?? _currentDepthBiomeName ?? "-";
@@ -1523,10 +1701,7 @@ public sealed class TimerEngine : INotifyPropertyChanged, IDisposable
 
     public void Dispose()
     {
-        _cutsceneTracker?.Dispose();
-        _heraldTracker?.Dispose();
-        _eliteTracker?.Dispose();
-        _process.Dispose();
+        _gameSource.Dispose();
     }
 
     private void SetField<T>(ref T field, T value, [CallerMemberName] string? propertyName = null)

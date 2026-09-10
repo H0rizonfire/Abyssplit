@@ -1,0 +1,47 @@
+name: Bug report
+description: Something's broken, crashing, or not working as expected.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Tip: the **Report a Bug** button on the Settings tab opens a pre-filled issue like this
+        one automatically, with your app version and a recent log excerpt already attached — it's
+        usually faster than filling this out by hand.
+  - type: input
+    id: version
+    attributes:
+      label: App version
+      description: Shown in the Configurator's title bar and on the About window (Settings tab).
+      placeholder: v0.1.1
+    validations:
+      required: true
+  - type: dropdown
+    id: build
+    attributes:
+      label: Which build are you running?
+      options:
+        - Installer
+        - Portable exe
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you expect instead?
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: If you can make it happen again, list the steps.
+  - type: textarea
+    id: log
+    attributes:
+      label: Log excerpt
+      description: >-
+        Settings tab → Report a Bug reveals today's log file in Explorer. Paste the relevant part
+        here, or attach the whole file below.
+      render: text

@@ -38,4 +38,24 @@ public static class GameOffsets
     public const int LevelGenerator_LobbyElevatorSequenceActive = 0x3D2;
 
     public const int GUObjectArray = 0xA803880;
+
+    public const string? LastVerifiedGameVersion = null;
+
+    public static class PlausibilityBounds
+    {
+        public const int MinLevelReached = 0;
+        public const int MaxLevelReached = 50;
+
+        public const int MinRoomReached = 0;
+        public const int MaxRoomReached = 30;
+
+        public const float MinRunTime = 0f;
+        public const float MaxRunTime = 6 * 3600f;
+
+        public const int MinGoldCollected = 0;
+        public const int MaxGoldCollected = 1_000_000;
+
+        public const float MinPlayerHealth = -1f;
+        public const float MaxPlayerHealth = 10_000f;
+    }
 }

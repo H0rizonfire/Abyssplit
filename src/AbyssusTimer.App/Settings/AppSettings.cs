@@ -1,5 +1,6 @@
 using System.IO;
 using System.Text.Json;
+using AbyssusOverlay.Core;
 
 namespace AbyssusTimer.App.Settings;
 
@@ -36,6 +37,12 @@ public sealed class AppSettings
 
     public bool PauseStopsTime { get; set; }
     public bool AutoResetOnLobbyReturn { get; set; } = true;
+
+    public bool PlaySoundOnNewPb { get; set; } = true;
+
+    public bool AlwaysShowOverlay { get; set; }
+
+    public bool ResetRunHotkeyEnabled { get; set; }
 
     public bool UseSoftwareRendering { get; set; } = true;
 
@@ -84,11 +91,7 @@ public sealed class AppSettings
     {
         try
         {
-            var directory = Path.GetDirectoryName(FilePath);
-            if (!string.IsNullOrEmpty(directory))
-                Directory.CreateDirectory(directory);
-
-            File.WriteAllText(FilePath, JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true }));
+            AtomicFile.WriteAllText(FilePath, JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true }));
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {

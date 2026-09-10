@@ -1,6 +1,7 @@
 # Abyssplit User Guide
 
-Everything the app can do, tab by tab. See [README.md](README.md) for installation.
+Everything the app can do, tab by tab. See [README.md](README.md) for installation, or
+[TROUBLESHOOTING.md](TROUBLESHOOTING.md) if something isn't working right.
 
 ## Getting started
 
@@ -48,18 +49,28 @@ keeps its own independent personal bests and history. Locked while a run is in p
 ## The History tab
 
 Every attempt you've made (finished or not) with its final time. Select one to see its full
-per-floor **Details** breakdown. Three actions per attempt:
+per-floor **Details** breakdown. Four actions per attempt:
 - **Compare** — sets it as your Specific Run comparison source (Settings tab).
 - **Share** — exports it as an `.abysplit` file (IGT, Load-Free, and Load+Cutscene-Free times and
   full per-floor splits included) after asking for a runner name, so you can send it to someone
   else to race, or submit it for record verification.
+- **Copy** — copies a quick plain-text summary to the clipboard instead — lighter than Share's
+  full file, for pasting a result straight into Discord or chat.
 - **Delete** — removes it from history permanently.
+
+If Abyssplit or the game crashes mid-run, the attempt isn't lost — it gets recorded as
+**Incomplete** the next time you launch, using whichever floors it had already completed
+(anything from the floor you were still on when it crashed isn't recoverable, same as any
+checkpoint-based recovery).
 
 ## The Stats tab
 
 - **Per-Location Stats** — average/median/best/worst segment time for every floor and boss you've
   reached, plus a consistency (standard deviation) figure.
-- **PB Progression** — how your best full-run time has improved attempt over attempt.
+- **PB Progression** — a small chart plus a list of every point your best full-run time improved.
+  The chart needs at least two completed runs to draw a line. Scale labels on the left show the
+  slowest and fastest times on the line, and each PB is marked with a dot — hover one to see its
+  date and time without cross-referencing the list below.
 - **Attempts Reached** — how far you got, across every attempt.
 
 All three are scoped to whichever category and player count is currently active.
@@ -72,8 +83,11 @@ All three are scoped to whichever category and player count is currently active.
 |---|---|
 | **Pause Stops Time** | Off by default — pausing the game doesn't freeze the adjusted timers. Turning it on will make times ineligible for leaderboard submission unless the ruleset you're running under explicitly allows pausing. |
 | **Auto-Reset on Lobby Return** | On by default — timers reset the moment you're back in the lobby, ready for the next attempt. |
+| **Play Sound on New PB** | On by default — a short sound plays when you beat your full-run personal best (not per-floor bests, which fire too often for a sound to make sense). Turn off if you'd rather it stay silent. Custom sound files are planned for a future update. |
 | **Software Rendering** | On by default — avoids overlay stutter/freezes when the game and overlay are competing for GPU time. Turn off only if your bottleneck is CPU instead. Requires an app restart. |
-| **Run at Startup** | Off by default — launches Abyssplit, minimized to the tray, when you sign in to Windows. |
+| **Run at Startup** | Off by default — launches Abyssplit, minimized to the tray, when you sign in to Windows. Works the same whether you're running the installed copy or the portable exe — it points at wherever the app is running from *right now*. If you're on the portable exe, moving, renaming, or deleting that file afterward (e.g. replacing it with a newer download) will silently break this until you re-enable it from the new location. |
+| **Always Show Overlay** | Off by default — the overlay only appears while attached to the game, or while this Configurator window is open. Minimizing to the tray hides it too, unless you're attached. Turn this on to keep the overlay visible all the time regardless. |
+| **Reset Run Hotkey** | Off by default — <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>R</kbd> resets the run from anywhere, even while the game (or anything else) has focus, so you don't have to alt-tab between attempts. Same "only outside a run" protection as the Reset Run button — it won't fire mid-run. Not currently remappable. |
 
 ### Display
 
@@ -103,6 +117,10 @@ impossible time, delete it here to revert to your next-fastest completed run.
 | **Import Split File** | Load a `.abysplit` file someone shared with you to race against it — automatically sets the comparison source to Imported File. |
 
 ### Support
+
+**Check for Updates** re-runs the update check on demand — the app also checks once automatically
+at startup, but this always reports back (up to date, a newer version found, or the check itself
+couldn't complete) rather than staying silent unless something's actually available.
 
 **Report a Bug** opens a pre-filled GitHub issue with a recent log excerpt attached, and reveals
 today's full log file in case more detail is needed. **About** shows the app version and a link to

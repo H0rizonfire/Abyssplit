@@ -7,13 +7,14 @@ directly out of the game's own memory — no manual splitting required. It sits 
 as a separate window: a small always-on-top overlay for live timing, and a configurator window for
 history, stats, and settings.
 
-**Status:** early — versioning starts at `0.1.0`. Not in official use.
+**Status:** early — versioning starts at `0.1.0`. Not yet publicly released.
 
 **Not affiliated with Abyssus's developer or publisher.** Using any third-party tool with an
 online game is done at your own risk — see [Terms of Use](#terms-of-use--license) below, and check
 the rules of any leaderboard or event before submitting a time.
 
-For a full walkthrough of every tab and setting, see the [User Guide](USER_GUIDE.md).
+For a full walkthrough of every tab and setting, see the [User Guide](USER_GUIDE.md). Something
+not working right? Check [Troubleshooting](TROUBLESHOOTING.md) first.
 
 ## Features
 
@@ -34,7 +35,8 @@ the specific ruleset you're submitting to explicitly allows pausing.
 A couple of other session-behavior settings round this out: **Auto-Reset on Lobby Return** clears
 the split list as soon as you're back in the lobby, ready for the next attempt, and **Software
 Rendering** trades a little CPU cost to avoid the overlay stuttering if it's competing with the
-game for GPU time.
+game for GPU time. An optional **Reset Run Hotkey** (Ctrl+Alt+R, off by default) resets from
+anywhere — no alt-tabbing needed between attempts — and won't fire mid-run.
 
 ### Splits
 
@@ -106,7 +108,10 @@ access, or GitHub being unreachable, just means it silently doesn't show anythin
 - **Minimize to tray** — minimizing the window hides it to a system tray icon instead of the
   taskbar. Right-click the tray icon for **Show Abyssplit**, **Reset Run**, and **Exit**.
   Double-click to restore.
-- **Run at Startup** (Settings tab) — launches Abyssplit straight to the tray when you log in.
+- **Run at Startup** (Settings tab) — launches Abyssplit straight to the tray when you log in. The
+  overlay itself only appears once you're actually attached to the game (or **Always Show
+  Overlay** is turned on), so a background launch doesn't put anything on screen until there's
+  something to time.
 
 ## Installation
 
@@ -170,9 +175,10 @@ git config core.hooksPath .githooks
 
 ## Reporting issues
 
-Use the app's built-in **Report an Issue** button (Settings tab) — it opens a pre-filled GitHub
-issue with a recent log excerpt and reveals the full log file for you to attach if needed. You can
-also [open an issue directly](https://github.com/H0rizonfire/Abyssplit/issues).
+Check [Troubleshooting](TROUBLESHOOTING.md) first — it covers the issues that come up most often.
+Otherwise, use the app's built-in **Report an Issue** button (Settings tab) — it opens a
+pre-filled GitHub issue with a recent log excerpt and reveals the full log file for you to attach
+if needed. You can also [open an issue directly](https://github.com/H0rizonfire/Abyssplit/issues).
 
 ## Support
 

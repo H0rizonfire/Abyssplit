@@ -41,5 +41,7 @@
         <converters:PathToFileNameConverter x:Key="PathToFileNameConverter" />
         <converters:InverseBoolToVisibilityConverter x:Key="InverseBoolToVisibilityConverter" />
         <converters:EmptyCollectionToVisibilityConverter x:Key="EmptyCollectionToVisibilityConverter" />
+        <converters:NonEmptyCollectionToVisibilityConverter x:Key="NonEmptyCollectionToVisibilityConverter" />
+        <converters:CenterOnCanvasPointConverter x:Key="CenterOnCanvasPointConverter" />
     </Application.Resources>
 </Application>

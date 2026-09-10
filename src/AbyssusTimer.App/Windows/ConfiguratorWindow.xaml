@@ -455,6 +455,17 @@
                     </TextBlock>
                 </DockPanel>
             </Border>
+
+            <Border x:Name="GameMismatchBanner" Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource WarningBrush}" BorderThickness="1"
+                    CornerRadius="4" Margin="0,10,0,0" Padding="12,8"
+                    Visibility="{Binding IsPossibleGameMismatch, Converter={StaticResource BoolToVisibilityConverter}}">
+                <DockPanel>
+                    <Button DockPanel.Dock="Right" Content="Dismiss" Style="{StaticResource ThemedButton}" Padding="10,4" FontSize="11" Click="DismissGameMismatchBanner_Click" />
+                    <TextBlock TextWrapping="Wrap" VerticalAlignment="Center" Foreground="{StaticResource TextPrimaryBrush}" FontSize="12">
+                        <Run Text="Possible game/timer mismatch: " /><Run Text="{Binding GameMismatchDetailText, Mode=OneWay}" /><Run Text=" Times recorded right now may be inaccurate — see Report a Bug (Settings tab) if this keeps happening." />
+                    </TextBlock>
+                </DockPanel>
+            </Border>
         </StackPanel>
 
         <TabControl Grid.Row="1">
@@ -590,6 +601,7 @@
                                                 <ColumnDefinition Width="Auto" />
                                                 <ColumnDefinition Width="Auto" />
                                                 <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="Auto" />
                                             </Grid.ColumnDefinitions>
                                             <TextBlock Grid.Column="0" Text="{Binding Label}" Foreground="{StaticResource TextPrimaryBrush}" FontSize="12"
                                                        VerticalAlignment="Center" TextTrimming="CharacterEllipsis" Margin="0,0,8,0" />
@@ -619,7 +631,10 @@
                                             <Button Grid.Column="2" Content="Share" Style="{StaticResource ThemedButton}"
                                                     Padding="8,4" FontSize="10" Margin="0,0,6,0"
                                                     Tag="{Binding Index}" Click="HistoryRowShare_Click" />
-                                            <Button Grid.Column="3" Content="Delete" Style="{StaticResource ThemedButton}"
+                                            <Button Grid.Column="3" Content="Copy" Style="{StaticResource ThemedButton}"
+                                                    Padding="8,4" FontSize="10" Margin="0,0,6,0"
+                                                    Tag="{Binding Index}" Click="HistoryRowCopy_Click" />
+                                            <Button Grid.Column="4" Content="Delete" Style="{StaticResource ThemedButton}"
                                                     Padding="8,4" FontSize="10"
                                                     BorderBrush="{StaticResource DangerBrush}" Foreground="{StaticResource DangerTextBrush}"
                                                     Tag="{Binding Index}" Click="HistoryRowDelete_Click" />
@@ -702,6 +717,51 @@
                         <TextBlock Text="Every point your full-run PB improved, oldest first." Foreground="{StaticResource TextDimBrush}" FontStyle="Italic" FontSize="10" TextWrapping="Wrap" Margin="0,0,0,8" />
                         <TextBlock Text="No completed runs recorded yet for this category." Foreground="{StaticResource TextDimBrush}" FontStyle="Italic" FontSize="11"
                                    Visibility="{Binding StatsPbProgressionRows, Converter={StaticResource EmptyCollectionToVisibilityConverter}}" />
+                        <Grid Margin="0,0,0,12" Visibility="{Binding StatsPbProgressionChartPoints, Converter={StaticResource NonEmptyCollectionToVisibilityConverter}}">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <Grid Grid.Column="0" Height="60" Margin="0,0,8,0">
+                                <TextBlock Text="{Binding StatsPbProgressionChartMaxTimeText}" Foreground="{StaticResource TextDimBrush}"
+                                           FontFamily="Consolas" FontSize="9" VerticalAlignment="Top" />
+                                <TextBlock Text="{Binding StatsPbProgressionChartMinTimeText}" Foreground="{StaticResource TextDimBrush}"
+                                           FontFamily="Consolas" FontSize="9" VerticalAlignment="Bottom" />
+                            </Grid>
+                            <Viewbox Grid.Column="1" Height="60" Stretch="Fill">
+                                <Canvas Width="300" Height="60">
+                                    <Polyline Points="{Binding StatsPbProgressionChartPoints}" Stroke="{StaticResource ToxicBrush}" StrokeThickness="2"
+                                              StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+                                    <ItemsControl ItemsSource="{Binding StatsPbProgressionChartMarkers}">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <Canvas />
+                                            </ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                                        <ItemsControl.ItemContainerStyle>
+                                            <Style TargetType="ContentPresenter">
+                                                <Setter Property="Canvas.Left" Value="{Binding X, Converter={StaticResource CenterOnCanvasPointConverter}, ConverterParameter=8}" />
+                                                <Setter Property="Canvas.Top" Value="{Binding Y, Converter={StaticResource CenterOnCanvasPointConverter}, ConverterParameter=8}" />
+                                            </Style>
+                                        </ItemsControl.ItemContainerStyle>
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate DataType="{x:Type engine:PbChartMarker}">
+                                                <Ellipse Width="8" Height="8" Fill="{StaticResource BrassLightBrush}"
+                                                         Stroke="{StaticResource BackgroundBrush}" StrokeThickness="1.5">
+                                                    <Ellipse.ToolTip>
+                                                        <TextBlock FontSize="11">
+                                                            <Run Text="{Binding DateText}" />
+                                                            <Run Text=" — " />
+                                                            <Run Text="{Binding TimeText}" FontWeight="Bold" />
+                                                        </TextBlock>
+                                                    </Ellipse.ToolTip>
+                                                </Ellipse>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </Canvas>
+                            </Viewbox>
+                        </Grid>
                         <ItemsControl ItemsSource="{Binding StatsPbProgressionRows}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate DataType="{x:Type engine:PbMilestoneRow}">
@@ -775,6 +835,15 @@
                         </Border>
                         <Border Style="{StaticResource ToggleRow}">
                             <DockPanel>
+                                <CheckBox DockPanel.Dock="Right" IsChecked="{Binding PlaySoundOnNewPb, Mode=TwoWay}" VerticalAlignment="Center" />
+                                <StackPanel>
+                                    <TextBlock Text="Play Sound on New PB" Foreground="{StaticResource TextPrimaryBrush}" FontSize="12" />
+                                    <TextBlock Text="On by default — a short sound plays when you beat your full-run personal best. Custom sound files are planned for a future update." Foreground="{StaticResource TextDimBrush}" FontStyle="Italic" FontSize="10" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </DockPanel>
+                        </Border>
+                        <Border Style="{StaticResource ToggleRow}">
+                            <DockPanel>
                                 <CheckBox x:Name="SoftwareRenderingCheckBox" DockPanel.Dock="Right" Checked="SoftwareRendering_Changed" Unchecked="SoftwareRendering_Changed" VerticalAlignment="Center" />
                                 <StackPanel>
                                     <TextBlock Text="Software Rendering" Foreground="{StaticResource TextPrimaryBrush}" FontSize="12" />
@@ -788,6 +857,24 @@
                                 <StackPanel>
                                     <TextBlock Text="Run at Startup" Foreground="{StaticResource TextPrimaryBrush}" FontSize="12" />
                                     <TextBlock Text="Off by default — launches Abyssplit (minimized to the tray) when you sign in to Windows." Foreground="{StaticResource TextDimBrush}" FontStyle="Italic" FontSize="10" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </DockPanel>
+                        </Border>
+                        <Border Style="{StaticResource ToggleRow}">
+                            <DockPanel>
+                                <CheckBox DockPanel.Dock="Right" IsChecked="{Binding AlwaysShowOverlay, Mode=TwoWay}" VerticalAlignment="Center" />
+                                <StackPanel>
+                                    <TextBlock Text="Always Show Overlay" Foreground="{StaticResource TextPrimaryBrush}" FontSize="12" />
+                                    <TextBlock Text="Off by default — the overlay only shows while attached to the game, or while this window is open. Turn on to keep it visible all the time." Foreground="{StaticResource TextDimBrush}" FontStyle="Italic" FontSize="10" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </DockPanel>
+                        </Border>
+                        <Border Style="{StaticResource ToggleRow}">
+                            <DockPanel>
+                                <CheckBox x:Name="ResetRunHotkeyCheckBox" DockPanel.Dock="Right" Checked="ResetRunHotkey_Changed" Unchecked="ResetRunHotkey_Changed" VerticalAlignment="Center" />
+                                <StackPanel>
+                                    <TextBlock Text="Reset Run Hotkey" Foreground="{StaticResource TextPrimaryBrush}" FontSize="12" />
+                                    <TextBlock Text="Off by default — Ctrl+Alt+R resets the run from anywhere, even while the game has focus. Same &quot;only outside a run&quot; guard as the Reset Run button." Foreground="{StaticResource TextDimBrush}" FontStyle="Italic" FontSize="10" TextWrapping="Wrap" />
                                 </StackPanel>
                             </DockPanel>
                         </Border>
@@ -926,6 +1013,18 @@
                         </Border>
 
                         <TextBlock Text="Support" Style="{StaticResource SectionHeader}" />
+                        <Border Style="{StaticResource ToggleRow}">
+                            <DockPanel>
+                                <Button x:Name="CheckForUpdatesButton" DockPanel.Dock="Right" Content="Check for Updates" Style="{StaticResource ThemedButton}"
+                                        Padding="10,4" FontSize="11" VerticalAlignment="Center"
+                                        Click="CheckForUpdates_Click" />
+                                <StackPanel>
+                                    <TextBlock Text="Check for Updates" Foreground="{StaticResource TextPrimaryBrush}" FontSize="12" />
+                                    <TextBlock Text="The app also checks once automatically at startup — this is just a manual re-check." Foreground="{StaticResource TextDimBrush}" FontStyle="Italic" FontSize="10" TextWrapping="Wrap" />
+                                    <TextBlock x:Name="CheckForUpdatesStatusText" FontSize="11" Margin="0,4,0,0" TextWrapping="Wrap" Visibility="Collapsed" />
+                                </StackPanel>
+                            </DockPanel>
+                        </Border>
                         <Border Style="{StaticResource ToggleRow}">
                             <DockPanel>
                                 <Button DockPanel.Dock="Right" Content="Report an Issue" Style="{StaticResource ThemedButton}"

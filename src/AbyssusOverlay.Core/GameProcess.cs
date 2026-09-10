@@ -25,6 +25,8 @@ public sealed class GameProcess : IDisposable
     public nint ModuleBase { get; private set; }
     public bool IsAttached => _handle != 0;
 
+    public string? ExecutablePath { get; private set; }
+
     public bool TryAttach(string processName)
     {
         Detach();
@@ -48,6 +50,7 @@ public sealed class GameProcess : IDisposable
             return false;
 
         ModuleBase = mainModule.BaseAddress;
+        ExecutablePath = mainModule.FileName;
         return true;
     }
 
@@ -60,6 +63,7 @@ public sealed class GameProcess : IDisposable
         }
 
         ModuleBase = 0;
+        ExecutablePath = null;
     }
 
     public bool IsProcessAlive()

@@ -76,6 +76,7 @@ public partial class App : Application
         {
             PauseStopsTime = _settings.PauseStopsTime,
             AutoResetOnLobbyReturn = _settings.AutoResetOnLobbyReturn,
+            PlaySoundOnNewPb = _settings.PlaySoundOnNewPb,
             SelectedPrimaryTimer = Enum.TryParse<PrimaryTimerKind>(_settings.PrimaryTimer, out var primaryTimer)
                 ? primaryTimer
                 : PrimaryTimerKind.LoadCutsceneFree,
@@ -117,6 +118,7 @@ public partial class App : Application
             OverlayFloorTextColor = _settings.OverlayFloorTextColor,
             OverlayTitleFontSize = _settings.OverlayTitleFontSize,
             OverlayTitleTextColor = _settings.OverlayTitleTextColor,
+            AlwaysShowOverlay = _settings.AlwaysShowOverlay,
         };
 
         var overlayLeft = _settings.OverlayLeft;
@@ -133,7 +135,6 @@ public partial class App : Application
             Top = overlayTop,
             DataContext = _engine,
         };
-        _overlay.Show();
 
         var configurator = new ConfiguratorWindow(_overlay, _engine, _settings);
         MainWindow = configurator;
@@ -213,6 +214,7 @@ public partial class App : Application
         if (_engine is not null)
         {
             _settings.PauseStopsTime = _engine.PauseStopsTime;
+            _settings.PlaySoundOnNewPb = _engine.PlaySoundOnNewPb;
             _settings.AutoResetOnLobbyReturn = _engine.AutoResetOnLobbyReturn;
             _settings.PrimaryTimer = _engine.SelectedPrimaryTimer.ToString();
             _settings.ActiveCategory = _engine.ActiveCategory.ToString();
@@ -240,6 +242,7 @@ public partial class App : Application
             _settings.OverlayFloorTextColor = _engine.OverlayFloorTextColor;
             _settings.OverlayTitleFontSize = _engine.OverlayTitleFontSize;
             _settings.OverlayTitleTextColor = _engine.OverlayTitleTextColor;
+            _settings.AlwaysShowOverlay = _engine.AlwaysShowOverlay;
         }
 
         _settings.Save();

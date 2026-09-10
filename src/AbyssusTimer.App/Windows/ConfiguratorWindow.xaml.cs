@@ -3,9 +3,11 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
+using System.Windows.Media;
 using AbyssusTimer.App.Engine;
 using AbyssusTimer.App.Interop;
 using AbyssusTimer.App.Settings;
+using AbyssusTimer.App.Theme;
 
 namespace AbyssusTimer.App.Windows;
 
@@ -18,6 +20,9 @@ public partial class ConfiguratorWindow : Window
     private System.Windows.Forms.NotifyIcon? _trayIcon;
     private System.Windows.Forms.ToolStripMenuItem? _trayResetMenuItem;
 
+    private const int ResetRunHotkeyId = 1;
+    private GlobalHotkey? _resetRunHotkey;
+
     public ConfiguratorWindow(OverlayWindow overlay, TimerEngine engine, AppSettings settings)
     {
         InitializeComponent();
@@ -27,6 +32,42 @@ public partial class ConfiguratorWindow : Window
         DataContext = engine;
         SoftwareRenderingCheckBox.IsChecked = settings.UseSoftwareRendering;
         InitializeTrayIcon();
+
+        IsVisibleChanged += (_, _) =>
+        {
+            var isVisible = IsVisible;
+            Dispatcher.BeginInvoke(() => _engine.IsConfiguratorVisible = isVisible);
+        };
+
+        ResetRunHotkeyCheckBox.IsChecked = settings.ResetRunHotkeyEnabled;
+        if (settings.ResetRunHotkeyEnabled)
+            Dispatcher.BeginInvoke(EnableResetRunHotkey);
+    }
+
+    private void EnableResetRunHotkey() =>
+        _resetRunHotkey ??= new GlobalHotkey(this, ResetRunHotkeyId, ModifierKeys.Control | ModifierKeys.Alt, Key.R,
+            () =>
+            {
+                if (_engine.IsInRun)
+                    return;
+                AppLog.Log("Reset Run (hotkey)");
+                _engine.ResetRun();
+            });
+
+    private void DisableResetRunHotkey()
+    {
+        _resetRunHotkey?.Dispose();
+        _resetRunHotkey = null;
+    }
+
+    private void ResetRunHotkey_Changed(object sender, RoutedEventArgs e)
+    {
+        var enabled = ResetRunHotkeyCheckBox.IsChecked == true;
+        _settings.ResetRunHotkeyEnabled = enabled;
+        if (enabled)
+            EnableResetRunHotkey();
+        else
+            DisableResetRunHotkey();
     }
 
     private void InitializeTrayIcon()
@@ -65,7 +106,11 @@ public partial class ConfiguratorWindow : Window
             if (WindowState == WindowState.Minimized)
                 MinimizeToTray();
         };
-        Closed += (_, _) => _trayIcon.Dispose();
+        Closed += (_, _) =>
+        {
+            _trayIcon.Dispose();
+            DisableResetRunHotkey();
+        };
         _engine.PropertyChanged += (_, args) =>
         {
             if (args.PropertyName == nameof(TimerEngine.IsInRun) && _trayResetMenuItem is not null)
@@ -179,6 +224,29 @@ public partial class ConfiguratorWindow : Window
             MessageBox.Show(this, "Couldn't save the split file. Check that the location is writable and try again.",
                 "Export Failed", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
+    }
+
+    private async void HistoryRowCopy_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button button || button.Tag is not int index)
+            return;
+
+        try
+        {
+            Clipboard.SetText(_engine.BuildSplitsSummaryText(index));
+        }
+        catch (Exception ex)
+        {
+            AppLog.LogException("Failed to copy splits summary to clipboard", ex);
+            return;
+        }
+
+        var originalContent = button.Content;
+        button.Content = "Copied!";
+        button.IsEnabled = false;
+        await Task.Delay(1200);
+        button.Content = originalContent;
+        button.IsEnabled = true;
     }
 
     private void BrowseImportSplitFile_Click(object sender, RoutedEventArgs e)
@@ -315,6 +383,9 @@ public partial class ConfiguratorWindow : Window
     private void DismissUpdateBanner_Click(object sender, RoutedEventArgs e) =>
         UpdateBanner.Visibility = Visibility.Collapsed;
 
+    private void DismissGameMismatchBanner_Click(object sender, RoutedEventArgs e) =>
+        GameMismatchBanner.Visibility = Visibility.Collapsed;
+
     private void ResetOverlayAppearance_Click(object sender, RoutedEventArgs e) =>
         _engine.ResetOverlayAppearanceToDefaults();
 
@@ -326,6 +397,24 @@ public partial class ConfiguratorWindow : Window
         };
         if (dialog.ShowDialog() == true)
             _engine.DeletePersonalBest();
+    }
+
+    private async void CheckForUpdates_Click(object sender, RoutedEventArgs e)
+    {
+        CheckForUpdatesButton.IsEnabled = false;
+        CheckForUpdatesStatusText.Visibility = Visibility.Visible;
+        CheckForUpdatesStatusText.Text = "Checking...";
+        CheckForUpdatesStatusText.Foreground = new SolidColorBrush(Palette.TextMuted);
+
+        var result = await _engine.CheckForUpdateAsync();
+
+        CheckForUpdatesButton.IsEnabled = true;
+        (CheckForUpdatesStatusText.Text, CheckForUpdatesStatusText.Foreground) = result switch
+        {
+            true => ($"A newer version (v{_engine.LatestVersionText}) is available — see the banner above.", new SolidColorBrush(Palette.Toxic)),
+            false => ("You're on the latest version.", new SolidColorBrush(Palette.TextMuted)),
+            null => ("Couldn't check for updates — no internet connection, or GitHub is unreachable.", new SolidColorBrush(Palette.DangerText)),
+        };
     }
 
     private void ReportIssue_Click(object sender, RoutedEventArgs e)

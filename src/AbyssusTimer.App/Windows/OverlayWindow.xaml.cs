@@ -34,6 +34,7 @@ public partial class OverlayWindow : Window
                 newEngine.PropertyChanged += Engine_PropertyChanged;
                 UpdateScale(newEngine);
                 UpdateBackground(newEngine);
+                UpdateVisibility(newEngine);
             }
         };
     }
@@ -52,7 +53,18 @@ public partial class OverlayWindow : Window
             case nameof(TimerEngine.OverlayScale):
                 UpdateScale(engine);
                 break;
+            case nameof(TimerEngine.ShouldOverlayBeVisible):
+                UpdateVisibility(engine);
+                break;
         }
+    }
+
+    private void UpdateVisibility(TimerEngine engine)
+    {
+        if (engine.ShouldOverlayBeVisible)
+            Show();
+        else
+            Hide();
     }
 
     private void UpdateScale(TimerEngine engine) =>
