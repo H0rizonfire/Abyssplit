@@ -1,6 +1,6 @@
 
 #define MyAppName "Abyssplit"
-#define MyAppVersion "0.1.0"
+#define MyAppVersion "0.1.1"
 #define MyAppPublisher "Abyssplit"
 #define MyAppExeName "AbyssusTimer.App.exe"
 #define MyAppURL "https://github.com/H0rizonfire/Abyssplit"
