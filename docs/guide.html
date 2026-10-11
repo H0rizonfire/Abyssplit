@@ -1,0 +1,516 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Abyssplit User Guide</title>
+<meta name="description" content="Everything Abyssplit can do, tab by tab: timers, splits, history, stats, settings, and overlay customization.">
+<link rel="icon" href="favicon.ico">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0A1210;
+    --surface:#17211D;
+    --surface-raised:#22302A;
+    --hairline:#3A4A44;
+    --brass:#C98F3F;
+    --brass-light:#E3B06A;
+    --brass-dim:#8A6430;
+    --teal:#3FD6C0;
+    --toxic:#C7FF3D;
+    --warn:#E3C93D;
+    --text:#ECE3D0;
+    --text-muted:#8A9994;
+    --text-dim:#56635E;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:'Inter',system-ui,-apple-system,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    overflow-x:hidden;
+  }
+  @media (prefers-reduced-motion: reduce){
+    html{scroll-behavior:auto;}
+    *{animation-duration:0.001ms !important; transition-duration:0.001ms !important;}
+  }
+  a{color:var(--brass-light);}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 28px;}
+  @media (max-width:600px){ .wrap{padding:0 16px;} }
+
+  /* ---------- nav (matches index.html) ---------- */
+  nav{
+    position:sticky;top:0;z-index:20;
+    background:rgba(10,18,16,0.82);
+    backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--hairline);
+  }
+  nav .wrap{display:flex;align-items:center;justify-content:space-between;height:64px;}
+  .brand{font-family:'Rajdhani',sans-serif;font-weight:700;font-size:19px;letter-spacing:0.03em;color:var(--text);text-decoration:none;}
+  .brand span{color:var(--brass);}
+  nav .links{display:flex;gap:28px;align-items:center;}
+  nav .links a{color:var(--text-muted);text-decoration:none;font-size:14px;font-weight:500;transition:color 0.15s;}
+  nav .links a:hover{color:var(--brass-light);}
+  nav .links a.current{color:var(--brass-light);}
+  .nav-cta{
+    background:var(--brass);color:var(--bg) !important;
+    padding:8px 16px;border-radius:5px;font-weight:600 !important;
+  }
+  .nav-cta:hover{background:var(--brass-light);}
+  @media (max-width:720px){ nav .links a:not(.nav-cta){display:none;} }
+
+  /* ---------- hero (matches comparison.html) ---------- */
+  .hero{position:relative;padding:72px 0 52px;overflow:hidden;text-align:center;}
+  .hero::before{
+    content:"";position:absolute;inset:0;z-index:0;
+    background:radial-gradient(ellipse 640px 380px at 50% -10%, rgba(63,214,192,0.09), transparent 60%),
+               radial-gradient(ellipse 700px 420px at 85% 20%, rgba(201,143,63,0.07), transparent 55%);
+  }
+  .hero-inner{position:relative;z-index:1;}
+  .kicker{
+    font-family:'JetBrains Mono',monospace;font-size:11.5px;letter-spacing:0.12em;text-transform:uppercase;
+    color:var(--brass-light);margin-bottom:10px;
+  }
+  h1.title{
+    font-family:'Rajdhani',sans-serif;font-weight:700;
+    font-size:clamp(34px,6vw,54px);
+    letter-spacing:0.01em;line-height:1.05;
+    margin:0 0 18px;color:var(--text);text-wrap:balance;
+  }
+  h1.title span{color:var(--brass);}
+  .tagline{
+    max-width:600px;margin:0 auto;
+    font-size:16px;line-height:1.65;color:var(--text-muted);
+    text-wrap:balance;
+  }
+
+  /* ---------- layout: contents + article ---------- */
+  .guide{display:grid;grid-template-columns:220px minmax(0,1fr);gap:48px;align-items:start;padding-bottom:72px;}
+  @media (max-width:860px){ .guide{grid-template-columns:minmax(0,1fr);gap:28px;} }
+
+  .toc{
+    position:sticky;top:88px;
+    background:var(--surface);border:1px solid var(--hairline);border-radius:10px;
+    padding:18px 18px 14px;
+  }
+  @media (max-width:860px){ .toc{position:static;} }
+  .toc .kicker{font-size:10.5px;margin-bottom:12px;}
+  .toc ol{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px;}
+  .toc li a{
+    display:block;padding:6px 10px;border-radius:5px;border-left:2px solid transparent;
+    color:var(--text-muted);text-decoration:none;font-size:14px;line-height:1.4;
+    transition:color 0.15s, background 0.15s, border-color 0.15s;
+  }
+  .toc li a:hover{color:var(--brass-light);background:var(--surface-raised);}
+  .toc li a.active{color:var(--brass-light);border-left-color:var(--brass);background:var(--surface-raised);}
+  .toc ol ol{padding-left:12px;margin:2px 0 4px;}
+  .toc ol ol a{font-size:13px;padding:4px 10px;}
+  @media (max-width:860px){ .toc ol ol{display:none;} }
+
+  article{min-width:0;}
+  .doc-section{
+    background:var(--surface);border:1px solid var(--hairline);border-radius:12px;
+    padding:30px 32px;margin-bottom:22px;
+    scroll-margin-top:84px;
+  }
+  @media (max-width:600px){ .doc-section{padding:22px 18px;} }
+  .doc-section .kicker{font-size:10.5px;margin-bottom:6px;}
+  .doc-section h2{
+    font-family:'Rajdhani',sans-serif;font-weight:700;font-size:clamp(24px,3.4vw,30px);
+    margin:0 0 16px;color:var(--text);
+  }
+  .doc-section h3{
+    font-family:'Rajdhani',sans-serif;font-weight:600;font-size:19px;
+    margin:30px 0 10px;color:var(--text);
+    padding-top:22px;border-top:1px solid var(--hairline);
+    scroll-margin-top:84px;
+  }
+  .doc-section h2 + h3{margin-top:4px;padding-top:0;border-top:none;}
+  .doc-section p{font-size:15px;line-height:1.7;color:var(--text-muted);margin:0 0 14px;}
+  .doc-section p:last-child{margin-bottom:0;}
+  .doc-section strong{color:var(--text);font-weight:600;}
+  .doc-section em{color:var(--text);}
+  .doc-section code{
+    font-family:'JetBrains Mono',ui-monospace,Consolas,monospace;font-size:13px;
+    color:var(--brass-light);background:var(--surface-raised);border:1px solid var(--hairline);
+    padding:1px 6px;border-radius:4px;
+  }
+  kbd{
+    font-family:'JetBrains Mono',ui-monospace,Consolas,monospace;font-size:12px;
+    color:var(--text);background:var(--surface-raised);border:1px solid var(--hairline);
+    border-bottom-width:2px;padding:1px 6px;border-radius:4px;
+  }
+  .doc-section ul{list-style:none;margin:0 0 14px;padding:0;display:flex;flex-direction:column;gap:10px;}
+  .doc-section ul li{
+    display:flex;gap:10px;align-items:flex-start;
+    font-size:15px;line-height:1.65;color:var(--text-muted);
+  }
+  .doc-section ul li::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--toxic);margin-top:9px;flex:none;}
+  .doc-section ul li > span{min-width:0;}
+
+  .callout{
+    display:flex;gap:12px;background:var(--surface-raised);border:1px solid var(--hairline);border-left:3px solid var(--brass);
+    border-radius:6px;padding:16px 18px;margin:0 0 14px;
+  }
+  .callout p{margin:0;color:var(--text-muted);}
+
+  /* ---------- tables (matches comparison.html) ---------- */
+  .table-scroll{overflow-x:auto;border:1px solid var(--hairline);border-radius:10px;background:var(--bg);margin:0 0 14px;}
+  table{width:100%;border-collapse:collapse;min-width:520px;}
+  thead th{
+    text-align:left;font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;
+    color:var(--text-dim);padding:14px 18px 10px;border-bottom:1px solid var(--hairline);
+  }
+  tbody td{
+    padding:12px 18px;border-bottom:1px solid var(--hairline);font-size:14px;line-height:1.6;
+    vertical-align:top;color:var(--text-muted);
+  }
+  tbody tr:last-child td{border-bottom:none;}
+  tbody td:first-child{width:28%;color:var(--text);}
+
+  /* ---------- screenshots ---------- */
+  figure.shot{margin:4px 0 18px;}
+  figure.shot .frame{
+    border-radius:10px;overflow:hidden;border:1px solid var(--hairline);
+    box-shadow:0 24px 60px -24px rgba(0,0,0,0.6);
+    background:var(--bg);
+  }
+  figure.shot img{display:block;width:100%;height:auto;}
+  figure.shot figcaption{font-size:12.5px;color:var(--text-dim);margin-top:10px;line-height:1.5;}
+  .shot-row{display:grid;grid-template-columns:minmax(0,1fr) 230px;gap:28px;align-items:start;}
+  .shot-row.wide-shot{grid-template-columns:minmax(0,1fr) 300px;}
+  @media (max-width:700px){
+    .shot-row,.shot-row.wide-shot{grid-template-columns:minmax(0,1fr);}
+    .shot-row figure.shot{max-width:300px;}
+  }
+
+  /* ---------- footer (matches index.html) ---------- */
+  footer{border-top:1px solid var(--hairline);padding:48px 0 40px;}
+  .footer-grid{display:flex;justify-content:space-between;flex-wrap:wrap;gap:28px;margin-bottom:32px;}
+  .footer-links{display:flex;gap:24px;flex-wrap:wrap;}
+  .footer-links a{color:var(--text-muted);text-decoration:none;font-size:14px;}
+  .footer-links a:hover{color:var(--brass-light);}
+  .coffee-link{
+    display:inline-flex;align-items:center;gap:8px;color:var(--toxic) !important;font-weight:600;
+  }
+  .footer-legal{font-size:12.5px;color:var(--text-dim);line-height:1.7;border-top:1px solid var(--hairline);padding-top:24px;}
+  .footer-legal a{color:var(--text-dim);text-decoration:underline;}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <a class="brand" href="index.html">ABYSS<span>PLIT</span></a>
+    <div class="links">
+      <a href="index.html#features">Features</a>
+      <a href="index.html#install">Install</a>
+      <a href="guide.html" class="current">User Guide</a>
+      <a href="https://github.com/H0rizonfire/Abyssplit/blob/main/CHANGELOG.md">Changelog</a>
+      <a href="comparison.html">vs. LiveSplit</a>
+      <a href="https://github.com/H0rizonfire/Abyssplit" class="nav-cta">GitHub</a>
+    </div>
+  </div>
+</nav>
+
+<div class="hero">
+  <div class="wrap hero-inner">
+    <div class="kicker">Documentation</div>
+    <h1 class="title">User <span>Guide</span></h1>
+    <p class="tagline">Everything the app can do, tab by tab. See the <a href="index.html#install">install section</a>
+    for installation, or <a href="https://github.com/H0rizonfire/Abyssplit/blob/main/TROUBLESHOOTING.md">Troubleshooting</a>
+    if something isn't working right.</p>
+  </div>
+</div>
+
+<div class="wrap guide">
+
+  <aside class="toc" aria-label="Contents">
+    <div class="kicker">Contents</div>
+    <ol>
+      <li><a href="#getting-started">Getting started</a></li>
+      <li><a href="#main-tab">The Main tab</a></li>
+      <li><a href="#history-tab">The History tab</a></li>
+      <li><a href="#stats-tab">The Stats tab</a></li>
+      <li><a href="#settings-tab">The Settings tab</a>
+        <ol>
+          <li><a href="#session-behavior">Session Behavior</a></li>
+          <li><a href="#display">Display</a></li>
+          <li><a href="#history-storage">History Storage</a></li>
+          <li><a href="#personal-best">Personal Best</a></li>
+          <li><a href="#split-comparison">Split Comparison</a></li>
+          <li><a href="#support">Support</a></li>
+        </ol>
+      </li>
+      <li><a href="#overlay-tab">The Overlay tab</a>
+        <ol>
+          <li><a href="#overlay-appearance">Overlay Appearance</a></li>
+          <li><a href="#section-styling">Section Styling</a></li>
+          <li><a href="#split-display">Split Display</a></li>
+        </ol>
+      </li>
+      <li><a href="#background">Running in the background</a></li>
+    </ol>
+  </aside>
+
+  <article>
+
+    <section class="doc-section" id="getting-started">
+      <div class="kicker">01</div>
+      <h2>Getting started</h2>
+      <div class="shot-row">
+        <div>
+          <p>Launch Abyssplit before or after Abyssus — it attaches automatically once the game is running,
+          shown by the <strong>Attached</strong> badge next to the category picker. The overlay appears on top of the
+          game once attached; the Configurator window is where you manage history, stats, and
+          settings.</p>
+        </div>
+        <figure class="shot">
+          <div class="frame"><img src="screenshots/overlay-preview.png" width="230" height="241" alt="Abyssplit overlay showing a live split for Sunken Gardens, with per-depth times and deltas"></div>
+          <figcaption>The in-game overlay during a run.</figcaption>
+        </figure>
+      </div>
+      <div class="callout">
+        <p><strong>Abyssus needs to be running in Borderless or Windowed mode, not exclusive Fullscreen.</strong>
+        Fullscreen mode bypasses Windows' own compositor, which hides every overlay — not just this one,
+        the same is true of Discord/Steam overlays — behind the game instead of on top of it. If the
+        overlay isn't showing up, this is almost always why; switch Abyssus's Window Mode setting and it
+        should appear immediately.</p>
+      </div>
+      <p>On first launch you'll be asked to accept the Terms of Use — a one-time step per version.
+      Windows may also show a SmartScreen warning the first time you run the installer or portable exe
+      — expected for an unsigned app, not a sign anything is wrong; click <strong>More info</strong>, then <strong>Run
+      anyway</strong>.</p>
+      <p>Abyssplit also checks once at startup for a newer release, and shows a dismissible banner at the
+      top of the Configurator if one's available. Times recorded on an outdated version may not be
+      accepted for leaderboard submission, so it's worth updating when prompted.</p>
+    </section>
+
+    <section class="doc-section" id="main-tab">
+      <div class="kicker">02</div>
+      <h2>The Main tab</h2>
+      <p><strong>Timers</strong> — three run side by side:</p>
+      <ul>
+        <li><span><strong>IGT</strong> — the game's own raw, unmodified run-time stat.</span></li>
+        <li><span><strong>Load-Free</strong> — IGT with loading-screen time subtracted out.</span></li>
+        <li><span><strong>Load+Cutscene-Free</strong> — Load-Free with cutscene time subtracted too. Splits and personal bests
+        are built on this number.</span></li>
+      </ul>
+      <p><strong>Splits</strong> — a live, floor-by-floor and room-by-room breakdown of the current run, each row showing
+      its Personal Best (or <strong>NEW PB</strong> the moment one is beaten) and a +/- delta against whatever
+      comparison source you've picked on the Settings tab.</p>
+      <p><strong>Below the splits list</strong>: your best full-run time, Sum of Best (the theoretical fastest run if
+      every floor's best segment happened in the same attempt), and your previous run's time.</p>
+      <p><strong>Category / player count</strong> (top right) — switch between Any%, All Bosses, True Ending, and their
+      Glitchless variants, each crossed with Solo/Duo/Trio/Quad. Every category+player-count combination
+      keeps its own independent personal bests and history. Locked while a run is in progress.</p>
+      <p><strong>Reset Run</strong> — manually resets the timers and split list. Also locked mid-run.</p>
+    </section>
+
+    <section class="doc-section" id="history-tab">
+      <div class="kicker">03</div>
+      <h2>The History tab</h2>
+      <p>Every attempt you've made (finished or not) with its final time. Select one to see its full
+      per-floor <strong>Details</strong> breakdown. Four actions per attempt:</p>
+      <ul>
+        <li><span><strong>Compare</strong> — sets it as your Specific Run comparison source (Settings tab).</span></li>
+        <li><span><strong>Share</strong> — exports it as an <code>.abysplit</code> file (IGT, Load-Free, and Load+Cutscene-Free times and
+        full per-floor splits included) after asking for a runner name, so you can send it to someone
+        else to race, or submit it for record verification.</span></li>
+        <li><span><strong>Copy</strong> — copies a quick plain-text summary to the clipboard instead — lighter than Share's
+        full file, for pasting a result straight into Discord or chat.</span></li>
+        <li><span><strong>Delete</strong> — removes it from history permanently.</span></li>
+      </ul>
+      <p>If Abyssplit or the game crashes mid-run, the attempt isn't lost — it gets recorded as
+      <strong>Incomplete</strong> the next time you launch, using whichever floors it had already completed
+      (anything from the floor you were still on when it crashed isn't recoverable, same as any
+      checkpoint-based recovery).</p>
+    </section>
+
+    <section class="doc-section" id="stats-tab">
+      <div class="kicker">04</div>
+      <h2>The Stats tab</h2>
+      <ul>
+        <li><span><strong>Per-Location Stats</strong> — average/median/best/worst segment time for every floor and boss you've
+        reached, plus a consistency (standard deviation) figure.</span></li>
+        <li><span><strong>PB Progression</strong> — a small chart plus a list of every point your best full-run time improved.
+        The chart needs at least two completed runs to draw a line. Scale labels on the left show the
+        slowest and fastest times on the line, and each PB is marked with a dot — hover one to see its
+        date and time without cross-referencing the list below.</span></li>
+        <li><span><strong>Attempts Reached</strong> — how far you got, across every attempt.</span></li>
+      </ul>
+      <p>All three are scoped to whichever category and player count is currently active.</p>
+    </section>
+
+    <section class="doc-section" id="settings-tab">
+      <div class="kicker">05</div>
+      <h2>The Settings tab</h2>
+
+      <h3 id="session-behavior">Session Behavior</h3>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Setting</th><th>What it does</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Pause Stops Time</strong></td><td>Off by default — pausing the game doesn't freeze the adjusted timers. Turning it on will make times ineligible for leaderboard submission unless the ruleset you're running under explicitly allows pausing.</td></tr>
+            <tr><td><strong>Auto-Reset on Lobby Return</strong></td><td>On by default — timers reset the moment you're back in the lobby, ready for the next attempt.</td></tr>
+            <tr><td><strong>Play Sound on New PB</strong></td><td>On by default — a short sound plays when you beat your full-run personal best (not per-floor bests, which fire too often for a sound to make sense). Turn off if you'd rather it stay silent. Custom sound files are planned for a future update.</td></tr>
+            <tr><td><strong>Software Rendering</strong></td><td>On by default — avoids overlay stutter/freezes when the game and overlay are competing for GPU time. Turn off only if your bottleneck is CPU instead. Requires an app restart.</td></tr>
+            <tr><td><strong>Run at Startup</strong></td><td>Off by default — launches Abyssplit, minimized to the tray, when you sign in to Windows. Works the same whether you're running the installed copy or the portable exe — it points at wherever the app is running from <em>right now</em>. If you're on the portable exe, moving, renaming, or deleting that file afterward (e.g. replacing it with a newer download) will silently break this until you re-enable it from the new location.</td></tr>
+            <tr><td><strong>Always Show Overlay</strong></td><td>Off by default — the overlay only appears while attached to the game, or while the Configurator window is open. Minimizing to the tray hides it too, unless you're attached. Turn this on to keep the overlay visible all the time regardless.</td></tr>
+            <tr><td><strong>Reset Run Hotkey</strong></td><td>Off by default — <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>R</kbd> resets the run from anywhere, even while the game (or anything else) has focus, so you don't have to alt-tab between attempts. Same "only outside a run" protection as the Reset Run button — it won't fire mid-run. Not currently remappable.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 id="display">Display</h3>
+      <p>Toggle whether the <strong>IGT</strong>, <strong>Load-Free</strong>, and <strong>Load+Cutscene-Free</strong> timer cards show on the Main
+      tab and overlay, and whether <strong>Previous Segment</strong> shows (controls both the overlay's Prev. Run row
+      and the line below the Main tab's split list).</p>
+
+      <h3 id="history-storage">History Storage</h3>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Setting</th><th>What it does</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Auto-Delete Old Runs</strong></td><td>On by default — keeps history from growing forever. Your PB run is never deleted. Turn off to keep every attempt permanently.</td></tr>
+            <tr><td><strong>Keep Up To</strong></td><td>How many attempts to retain, per category and player count — practicing Any% doesn't trim your All Bosses history.</td></tr>
+            <tr><td><strong>Delete</strong></td><td><em>Oldest</em> removes your earliest attempts first. <em>Slowest</em> removes your worst times first, keeping recent history.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 id="personal-best">Personal Best</h3>
+      <p><strong>Delete Recorded PB</strong> — only shown if you have one. A safety net: if a bug ever records an
+      impossible time, delete it here to revert to your next-fastest completed run.</p>
+
+      <h3 id="split-comparison">Split Comparison</h3>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Setting</th><th>What it does</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Compare Splits Against</strong></td><td><strong>Best</strong> — your all-time best per floor. <strong>Previous</strong> — your immediately prior attempt. <strong>Specific Run</strong> — a past attempt you choose below. <strong>Imported File</strong> — a split file someone shared with you.</td></tr>
+            <tr><td><strong>Specific Run to Compare Against</strong></td><td>Only used when Compare Splits Against is set to Specific Run.</td></tr>
+            <tr><td><strong>Import Split File</strong></td><td>Load a <code>.abysplit</code> file someone shared with you to race against it — automatically sets the comparison source to Imported File.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 id="support">Support</h3>
+      <p><strong>Check for Updates</strong> re-runs the update check on demand — the app also checks once automatically
+      at startup, but this always reports back (up to date, a newer version found, or the check itself
+      couldn't complete) rather than staying silent unless something's actually available.</p>
+      <p><strong>Report a Bug</strong> opens a pre-filled GitHub issue with a recent log excerpt attached, and reveals
+      today's full log file in case more detail is needed. <strong>About</strong> shows the app version and a link to
+      the project repository.</p>
+    </section>
+
+    <section class="doc-section" id="overlay-tab">
+      <div class="kicker">06</div>
+      <h2>The Overlay tab</h2>
+      <p><strong>Edit Overlay Layout</strong> — toggle on to drag the overlay into position in-game; toggle off to
+      return it to click-through (mouse input passes straight to the game). If you last positioned the
+      overlay on a second monitor that isn't connected the next time you launch, it automatically resets
+      to a default position instead of opening somewhere unreachable.</p>
+      <p><strong>Preview</strong> — shows sample split data on the overlay so you can see appearance changes without
+      being in a real run. Also unlocks every setting below it.</p>
+
+      <h3 id="overlay-appearance">Overlay Appearance</h3>
+      <div class="shot-row wide-shot">
+        <div>
+          <ul>
+            <li><span><strong>Background Opacity</strong> / <strong>Overlay Size</strong> — sliders, live preview.</span></li>
+            <li><span><strong>Background Image</strong> — an optional custom image behind the overlay, in place of the plain
+            background.</span></li>
+          </ul>
+        </div>
+        <figure class="shot">
+          <div class="frame"><img src="screenshots/overlay-settings.png" width="480" height="640" loading="lazy" alt="Abyssplit's overlay appearance settings, showing opacity, size, and styling sliders"></div>
+          <figcaption>Overlay appearance settings.</figcaption>
+        </figure>
+      </div>
+
+      <h3 id="section-styling">Section Styling</h3>
+      <ul>
+        <li><span><strong>Times Have a Background</strong> — off by default; draws a small highlighted pill behind every time
+        value.</span></li>
+        <li><span><strong>Title / Biome / Depth / Floor</strong> — independent font size and text color for each section. Title
+        is the overlay's static "ABYSSPLIT · {biome}" header (which always ends with the running app
+        version, not customizable); Floor is the innermost per-room breakdown.</span></li>
+      </ul>
+      <p><strong>Reset to Default</strong> reverts every appearance setting above to its shipped default in one click.</p>
+
+      <h3 id="split-display">Split Display</h3>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Setting</th><th>What it does</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Split Detail Level</strong></td><td><strong>Total</strong> — no split list, just the timer. <strong>Per-Depth</strong> — one row per depth. <strong>Per-Room</strong> — also breaks out each depth's rooms.</td></tr>
+            <tr><td><strong>List Overflow Behavior</strong></td><td><strong>Collapse</strong> — finished biomes fold to one line. <strong>Scroll</strong> — nothing folds, fixed-height, auto-scrolls to the current segment. <strong>Full List</strong> — nothing folds, no height cap.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>Both are locked while a run is in progress.</p>
+    </section>
+
+    <section class="doc-section" id="background">
+      <div class="kicker">07</div>
+      <h2>Running in the background</h2>
+      <ul>
+        <li><span><strong>Minimize to tray</strong> — minimizing the window hides it to a system tray icon instead of the
+        taskbar. Right-click for <strong>Show Abyssplit</strong>, <strong>Reset Run</strong>, and <strong>Exit</strong>; double-click to
+        restore.</span></li>
+        <li><span><strong>Run at Startup</strong> (<a href="#session-behavior">Settings tab</a>, above) — launches straight to the tray on login.</span></li>
+      </ul>
+    </section>
+
+  </article>
+</div>
+
+<footer>
+  <div class="wrap">
+    <div class="footer-grid">
+      <a class="brand" href="index.html">ABYSS<span>PLIT</span></a>
+      <div class="footer-links">
+        <a href="index.html">Home</a>
+        <a href="https://github.com/H0rizonfire/Abyssplit">GitHub</a>
+        <a href="https://github.com/H0rizonfire/Abyssplit/blob/main/CHANGELOG.md">Changelog</a>
+        <a href="comparison.html">vs. LiveSplit</a>
+        <a href="https://github.com/H0rizonfire/Abyssplit/issues">Report an Issue</a>
+        <a href="https://github.com/H0rizonfire/Abyssplit/blob/main/TROUBLESHOOTING.md">Troubleshooting</a>
+        <a class="coffee-link" href="https://buymeacoffee.com/h0rizonfire">Buy me a coffee</a>
+      </div>
+    </div>
+    <div class="footer-legal">
+      Abyssplit is free to use, no strings attached, licensed under <a href="https://github.com/H0rizonfire/Abyssplit/blob/main/LICENSE.md">PolyForm Noncommercial 1.0.0</a>.
+      Not affiliated with, endorsed by, or connected to the developers or publisher of Abyssus in any way.
+    </div>
+  </div>
+</footer>
+
+<script>
+(function(){
+  // Highlight the contents entry for whichever section is currently on screen.
+  if (!('IntersectionObserver' in window)) return;
+  var links = {};
+  document.querySelectorAll('.toc a').forEach(function(a){ links[a.getAttribute('href').slice(1)] = a; });
+  var targets = document.querySelectorAll('.doc-section, .doc-section h3[id]');
+  var observer = new IntersectionObserver(function(entries){
+    entries.forEach(function(entry){
+      if (!entry.isIntersecting) return;
+      var link = links[entry.target.id];
+      if (!link) return;
+      document.querySelectorAll('.toc a.active').forEach(function(a){ a.classList.remove('active'); });
+      link.classList.add('active');
+    });
+  }, { rootMargin: '-80px 0px -70% 0px' });
+  targets.forEach(function(t){ observer.observe(t); });
+})();
+</script>
+
+</body>
+</html>

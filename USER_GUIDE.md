@@ -7,7 +7,7 @@ Everything the app can do, tab by tab. See [README.md](README.md) for installati
 
 Launch Abyssplit before or after Abyssus — it attaches automatically once the game is running,
 shown by the **Attached** badge next to the category picker. The overlay appears on top of the
-game once attached; the Configurator window (this one) is where you manage history, stats, and
+game once attached; the Configurator window is where you manage history, stats, and
 settings.
 
 **Abyssus needs to be running in Borderless or Windowed mode, not exclusive Fullscreen.**
@@ -86,7 +86,7 @@ All three are scoped to whichever category and player count is currently active.
 | **Play Sound on New PB** | On by default — a short sound plays when you beat your full-run personal best (not per-floor bests, which fire too often for a sound to make sense). Turn off if you'd rather it stay silent. Custom sound files are planned for a future update. |
 | **Software Rendering** | On by default — avoids overlay stutter/freezes when the game and overlay are competing for GPU time. Turn off only if your bottleneck is CPU instead. Requires an app restart. |
 | **Run at Startup** | Off by default — launches Abyssplit, minimized to the tray, when you sign in to Windows. Works the same whether you're running the installed copy or the portable exe — it points at wherever the app is running from *right now*. If you're on the portable exe, moving, renaming, or deleting that file afterward (e.g. replacing it with a newer download) will silently break this until you re-enable it from the new location. |
-| **Always Show Overlay** | Off by default — the overlay only appears while attached to the game, or while this Configurator window is open. Minimizing to the tray hides it too, unless you're attached. Turn this on to keep the overlay visible all the time regardless. |
+| **Always Show Overlay** | Off by default — the overlay only appears while attached to the game, or while the Configurator window is open. Minimizing to the tray hides it too, unless you're attached. Turn this on to keep the overlay visible all the time regardless. |
 | **Reset Run Hotkey** | Off by default — <kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>R</kbd> resets the run from anywhere, even while the game (or anything else) has focus, so you don't have to alt-tab between attempts. Same "only outside a run" protection as the Reset Run button — it won't fire mid-run. Not currently remappable. |
 
 ### Display
