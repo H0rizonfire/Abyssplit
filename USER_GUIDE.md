@@ -68,7 +68,7 @@ checkpoint-based recovery).
 - **Per-Location Stats** — average/median/best/worst segment time for every floor and boss you've
   reached, plus a consistency (standard deviation) figure.
 - **PB Progression** — a small chart plus a list of every point your best full-run time improved.
-  The chart needs at least two completed runs to draw a line. Scale labels on the left show the
+  The chart needs at least two personal bests to draw a line — your first completed run, plus a later one that beats it. Scale labels on the left show the
   slowest and fastest times on the line, and each PB is marked with a dot — hover one to see its
   date and time without cross-referencing the list below.
 - **Attempts Reached** — how far you got, across every attempt.
