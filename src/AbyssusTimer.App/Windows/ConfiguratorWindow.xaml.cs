@@ -445,6 +445,7 @@ public partial class ConfiguratorWindow : Window
             var logExcerpt = AppLog.ReadTodayForReport(maxChars: 500);
             var body =
                 $"**App version:** {_engine.AppVersionText}\n" +
+                $"**Game:** {_engine.GameBuildText}\n" +
                 $"**OS:** {Environment.OSVersion.VersionString}\n" +
                 $"**Full log file:** `{AppLog.CurrentLogFilePath}`\n" +
                 "(Already copied to your clipboard, and the file is open/selected in Explorer — " +

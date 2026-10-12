@@ -8,7 +8,8 @@ Everything the app can do, tab by tab. See [README.md](README.md) for installati
 Launch Abyssplit before or after Abyssus — it attaches automatically once the game is running,
 shown by the **Attached** badge next to the category picker. The overlay appears on top of the
 game once attached; the Configurator window is where you manage history, stats, and
-settings.
+settings. Both the Steam and PC Game Pass versions of Abyssus are supported — Abyssplit detects
+which one is running on its own.
 
 **Abyssus needs to be running in Borderless or Windowed mode, not exclusive Fullscreen.**
 Fullscreen mode bypasses Windows' own compositor, which hides every overlay — not just this one,
@@ -122,7 +123,8 @@ impossible time, delete it here to revert to your next-fastest completed run.
 at startup, but this always reports back (up to date, a newer version found, or the check itself
 couldn't complete) rather than staying silent unless something's actually available.
 
-**Report a Bug** opens a pre-filled GitHub issue with a recent log excerpt attached, and reveals
+**Report a Bug** opens a pre-filled GitHub issue with your app version, which version of the
+game you're running (Steam or Game Pass), and a recent log excerpt attached, and reveals
 today's full log file in case more detail is needed. **About** shows the app version and a link to
 the project repository.
 

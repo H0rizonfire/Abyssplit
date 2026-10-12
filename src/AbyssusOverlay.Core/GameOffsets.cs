@@ -39,6 +39,16 @@ public static class GameOffsets
 
     public const int GUObjectArray = 0xA803880;
 
+    public const string GamePassProcessName = "RGame-WinGDK-Shipping";
+    public const int GamePassGWorld = 0xA08FC78;
+    public const int GamePassGNames = 0x9E1F9C0;
+    public const int GamePassGUObjectArray = 0x9F03550;
+
+    public static readonly GameBuildProfile SteamBuild = new(GameStore.Steam, ProcessName, GWorld, GNames, GUObjectArray);
+    public static readonly GameBuildProfile GamePassBuild = new(GameStore.GamePass, GamePassProcessName, GamePassGWorld, GamePassGNames, GamePassGUObjectArray);
+
+    public static readonly IReadOnlyList<GameBuildProfile> SupportedBuilds = [SteamBuild, GamePassBuild];
+
     public const string? LastVerifiedGameVersion = null;
 
     public static class PlausibilityBounds

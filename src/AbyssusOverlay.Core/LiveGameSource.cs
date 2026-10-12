@@ -8,6 +8,7 @@ public sealed class LiveGameSource : IGameSource
     private HeraldTracker? _heraldTracker;
     private EliteTracker? _eliteTracker;
     private NamePool? _namePool;
+    private GameBuildProfile? _attachedBuild;
 
     public LiveGameSource() => _reader = new AbyssusStatsReader(_process);
 
@@ -15,16 +16,20 @@ public sealed class LiveGameSource : IGameSource
 
     public string? ExecutablePath => _process.ExecutablePath;
 
+    public GameStore? Store => _process.IsAttached ? _attachedBuild?.Store : null;
+
     public bool IsProcessAlive() => _process.IsProcessAlive();
 
     public bool TryAttach()
     {
-        if (!_process.TryAttach(GameOffsets.ProcessName))
+        _attachedBuild = GameOffsets.SupportedBuilds.FirstOrDefault(build => _process.TryAttach(build.ProcessName));
+        if (_attachedBuild is null)
             return false;
 
-        var namePool = new NamePool(_process, _process.ModuleBase + GameOffsets.GNames);
+        _reader.Build = _attachedBuild;
+        var namePool = new NamePool(_process, _process.ModuleBase + _attachedBuild.GNames);
         _namePool = namePool;
-        var objectArray = new GUObjectArrayReader(_process, _process.ModuleBase + GameOffsets.GUObjectArray);
+        var objectArray = new GUObjectArrayReader(_process, _process.ModuleBase + _attachedBuild.GUObjectArray);
         _cutsceneTracker = new CutsceneTracker(_process, namePool, objectArray);
         _cutsceneTracker.Start();
         _heraldTracker = new HeraldTracker(namePool, objectArray);

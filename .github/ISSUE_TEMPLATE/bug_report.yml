@@ -6,8 +6,8 @@ body:
     attributes:
       value: |
         Tip: the **Report a Bug** button on the Settings tab opens a pre-filled issue like this
-        one automatically, with your app version and a recent log excerpt already attached — it's
-        usually faster than filling this out by hand.
+        one automatically, with your app version, game version (Steam or Game Pass), and a recent
+        log excerpt already attached — it's usually faster than filling this out by hand.
   - type: input
     id: version
     attributes:
@@ -23,6 +23,16 @@ body:
       options:
         - Installer
         - Portable exe
+    validations:
+      required: true
+  - type: dropdown
+    id: game-store
+    attributes:
+      label: Which version of Abyssus are you playing?
+      description: Steam and PC Game Pass are separate builds of the game, so this matters for most bugs.
+      options:
+        - Steam
+        - PC Game Pass
     validations:
       required: true
   - type: textarea

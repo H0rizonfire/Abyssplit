@@ -8,6 +8,8 @@ public sealed class AbyssusStatsReader
 
     public AbyssusStatsReader(GameProcess process) => _process = process;
 
+    public GameBuildProfile Build { get; set; } = GameOffsets.SteamBuild;
+
     public bool TryReadStats(out AbyssusStats stats)
     {
         stats = AbyssusStats.Empty;
@@ -15,7 +17,7 @@ public sealed class AbyssusStatsReader
         if (!_process.IsAttached)
             return false;
 
-        var gWorldAddress = _process.ModuleBase + GameOffsets.GWorld;
+        var gWorldAddress = _process.ModuleBase + Build.GWorld;
 
         if (!_process.TryReadPointer(gWorldAddress, out var world) || world == 0)
             return false;
@@ -48,7 +50,7 @@ public sealed class AbyssusStatsReader
             isPaused = pauserPlayerState != 0;
         }
 
-        var namePool = new NamePool(_process, _process.ModuleBase + GameOffsets.GNames);
+        var namePool = new NamePool(_process, _process.ModuleBase + Build.GNames);
 
         var health = 0f;
         var levelIds = Array.Empty<string>();

@@ -1,8 +1,9 @@
 # Troubleshooting
 
 Common issues and their fixes, in one place. If none of these match what you're seeing, use the
-app's own **Report a Bug** button (Settings tab) — it attaches your version and a log excerpt
-automatically, which is usually the fastest way to get help.
+app's own **Report a Bug** button (Settings tab) — it attaches your version, which version of the
+game you're on (Steam or Game Pass), and a log excerpt automatically, which is usually the fastest
+way to get help.
 
 ## The overlay isn't showing up
 
@@ -25,6 +26,8 @@ SmartScreen's "Windows protected your PC" warning for any small, free tool like 
 
 - Make sure Abyssus is actually running — Abyssplit attaches to a live game process, it doesn't
   launch the game for you.
+- **On PC Game Pass?** Older versions of Abyssplit only recognize the Steam version of the game,
+  so make sure you're on the latest release (Settings tab → **Check for Updates**).
 - **Run both at the same elevation level.** If Abyssus is running as administrator and Abyssplit
   isn't (or vice versa), Windows blocks the non-elevated process from reading the elevated one's
   memory, and Abyssplit will never attach. Either run both elevated or run neither elevated.

@@ -6,6 +6,17 @@ All notable changes to Abyssplit are documented here. Format follows
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-10-11
+
+### Added
+
+- **PC Game Pass support** — Abyssplit now works with the Game Pass version of Abyssus as well
+  as Steam, and detects which one is running automatically. Previously it only recognized the
+  Steam version and never attached to Game Pass. Steam behavior is unchanged.
+- **Game version in bug reports** — **Report a Bug** now includes which version of the game you're
+  playing (Steam or Game Pass, with its build number when available), and the log records it each
+  time Abyssplit attaches. The GitHub bug report form also asks for it.
+
 ## [0.1.1] - 2026-09-09
 
 ### Added
@@ -71,6 +82,7 @@ Initial release.
 - Tray minimization, launch-at-startup, and a click-through overlay by default.
 - An installer and a portable exe, both built from the same source.
 
-[Unreleased]: https://github.com/H0rizonfire/Abyssplit/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/H0rizonfire/Abyssplit/compare/v0.1.2...HEAD
+[0.1.2]: https://github.com/H0rizonfire/Abyssplit/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/H0rizonfire/Abyssplit/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/H0rizonfire/Abyssplit/releases/tag/v0.1.0

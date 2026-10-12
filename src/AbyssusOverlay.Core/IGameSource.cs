@@ -6,6 +6,8 @@ public interface IGameSource : IDisposable
 
     string? ExecutablePath { get; }
 
+    GameStore? Store => null;
+
     bool IsProcessAlive();
 
     bool TryAttach();

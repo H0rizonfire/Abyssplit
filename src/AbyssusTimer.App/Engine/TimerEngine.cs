@@ -37,6 +37,9 @@ public sealed class TimerEngine : INotifyPropertyChanged, IDisposable
     private bool _wasAttachedForLog;
     private DateTime _lastTickExceptionLogTime = DateTime.MinValue;
 
+    private volatile string _gameBuildText = "Not detected this session";
+    public string GameBuildText => _gameBuildText;
+
     private DateTime _lastSplitsRebuildTime = DateTime.MinValue;
     private static readonly TimeSpan SplitsRebuildInterval = TimeSpan.FromMilliseconds(250);
 
@@ -1212,7 +1215,17 @@ public sealed class TimerEngine : INotifyPropertyChanged, IDisposable
                 return;
             }
 
-            AppLog.Log("Attached to Abyssus.");
+            if (_gameSource.Store is { } store)
+            {
+                var version = GameBuildVersion.TryRead(store, _gameSource.ExecutablePath);
+                _gameBuildText = version is null ? store.DisplayName() : $"{store.DisplayName()} ({version})";
+                AppLog.Log($"Attached to Abyssus ({_gameBuildText}).");
+            }
+            else
+            {
+                AppLog.Log("Attached to Abyssus.");
+            }
+
             _wasAttachedForLog = true;
 
             IsPossibleGameMismatch = false;

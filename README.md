@@ -7,6 +7,9 @@ directly out of the game's own memory — no manual splitting required. It sits 
 as a separate window: a small always-on-top overlay for live timing, and a configurator window for
 history, stats, and settings.
 
+Works with both the **Steam** and **PC Game Pass** versions of Abyssus (Game Pass from v0.1.2) —
+it detects which one is running on its own.
+
 **Status:** early — versioning starts at `0.1.0`. Actively seeking tester feedback; expect rough
 edges.
 
