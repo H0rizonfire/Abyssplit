@@ -26,11 +26,13 @@ public partial class OverlayWindow : Window
             if (args.OldValue is TimerEngine oldEngine)
             {
                 oldEngine.SplitGroups.CollectionChanged -= SplitGroups_CollectionChanged;
+                oldEngine.WeaponGroups.CollectionChanged -= SplitGroups_CollectionChanged;
                 oldEngine.PropertyChanged -= Engine_PropertyChanged;
             }
             if (args.NewValue is TimerEngine newEngine)
             {
                 newEngine.SplitGroups.CollectionChanged += SplitGroups_CollectionChanged;
+                newEngine.WeaponGroups.CollectionChanged += SplitGroups_CollectionChanged;
                 newEngine.PropertyChanged += Engine_PropertyChanged;
                 UpdateScale(newEngine);
                 UpdateBackground(newEngine);
@@ -61,6 +63,12 @@ public partial class OverlayWindow : Window
 
     private void UpdateVisibility(TimerEngine engine)
     {
+        if (AbyssusTimer.App.Interop.AppPaths.IsShadow)
+        {
+            Hide();
+            return;
+        }
+
         if (engine.ShouldOverlayBeVisible)
             Show();
         else
@@ -102,7 +110,21 @@ public partial class OverlayWindow : Window
         if (DataContext is not TimerEngine { SplitListOverflowBehavior: SplitListOverflowBehavior.Scroll })
             return;
 
-        Dispatcher.BeginInvoke(() => SplitsScrollViewer.ScrollToEnd(), System.Windows.Threading.DispatcherPriority.ContextIdle);
+        Dispatcher.BeginInvoke(ScrollToCurrentSegment, System.Windows.Threading.DispatcherPriority.ContextIdle);
+    }
+
+    private void ScrollToCurrentSegment()
+    {
+        if (DataContext is TimerEngine { IsAllWeaponView: true } engine
+            && engine.WeaponGroups.FirstOrDefault(g => g.IsCurrent) is { } current
+            && WeaponGroupsList.ItemContainerGenerator.ContainerFromItem(current) is FrameworkElement row
+            && current != engine.WeaponGroups[^1])
+        {
+            row.BringIntoView(new Rect(0, Math.Max(0, row.ActualHeight - 1), 1, 1));
+            return;
+        }
+
+        SplitsScrollViewer.ScrollToEnd();
     }
 
     public void SetEditMode(bool enabled)

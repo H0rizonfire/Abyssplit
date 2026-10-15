@@ -8,6 +8,8 @@ public interface IGameSource : IDisposable
 
     GameStore? Store => null;
 
+    string? GameVersion => null;
+
     bool IsProcessAlive();
 
     bool TryAttach();

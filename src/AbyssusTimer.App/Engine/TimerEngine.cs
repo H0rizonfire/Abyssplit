@@ -6,6 +6,7 @@ using System.Runtime.CompilerServices;
 using System.Windows.Threading;
 using AbyssusOverlay.Core;
 using AbyssusTimer.App.Interop;
+using AbyssusTimer.App.Settings;
 
 namespace AbyssusTimer.App.Engine;
 
@@ -17,8 +18,28 @@ public sealed class TimerEngine : INotifyPropertyChanged, IDisposable
     internal Dispatcher UiDispatcherForTests => _uiDispatcher;
 
     private readonly IGameSource _gameSource;
-    private readonly AdjustedTimer _adjustedTimer = new();
-    private readonly AdjustedTimer _loadAndCutsceneFreeTimer = new();
+    private AdjustedTimer _adjustedTimer;
+    private AdjustedTimer _loadAndCutsceneFreeTimer;
+
+    private RunHold? _runHold;
+    private sealed record RunHold(float RunTime, int LevelReached, int RoomReached, float RunTimeAtDrop, AdjustedTimer StandbyLoadFree, AdjustedTimer StandbyLoadCutsceneFree);
+
+    private const float RunHoldNewRunClockSeconds = 10f;
+
+    private float? _midRunEvidenceStartRunTime;
+    private bool _joinedMidRunThisAttach;
+    private const float MidRunEvidenceClockSeconds = 1f;
+
+    public bool IsJoinedMidRun { get => _isJoinedMidRun; private set => SetField(ref _isJoinedMidRun, value); }
+    private bool _isJoinedMidRun;
+
+    private float _previousTickRunTime;
+    private bool _previousTickIsInRun;
+    private int _previousTickLevelReached;
+    private int _previousTickRoomReached;
+
+    private readonly Func<DateTime> _clock;
+    private DateTime _tickUtc;
     private readonly RunSession _session = new();
     private readonly PersonalBests _personalBests;
     private readonly RunHistory _runHistory;
@@ -34,11 +55,31 @@ public sealed class TimerEngine : INotifyPropertyChanged, IDisposable
     private string? _lastCutsceneAssetName;
     private bool _currentRunCompleted;
 
+    private AllWeaponAttempt? _allWeaponAttempt;
+
+    private bool _currentRunIsAllWeapon;
+
+    private string? _currentRunWeapon;
+    private string? _currentRunAnyPercentKey;
+
+    private readonly HashSet<string> _defeatedBiomeBosses = new(StringComparer.Ordinal);
+
+    private readonly List<IReadOnlyList<BiomeGroupViewModel>> _allWeaponRunGroups = new();
+    private int? _allWeaponLiveRunNumber;
+
+    private volatile bool _forceSplitsRebuild;
+
     private bool _wasAttachedForLog;
     private DateTime _lastTickExceptionLogTime = DateTime.MinValue;
 
     private volatile string _gameBuildText = "Not detected this session";
     public string GameBuildText => _gameBuildText;
+
+    private string? RecordedGameBuild => _gameSource.Store is null ? null : _gameBuildText;
+
+    private bool _hasLoggedGameVersionThisAttach;
+
+    public string? RecordingPath => (_gameSource as RecordingGameSource)?.RecordingPath;
 
     private DateTime _lastSplitsRebuildTime = DateTime.MinValue;
     private static readonly TimeSpan SplitsRebuildInterval = TimeSpan.FromMilliseconds(250);
@@ -82,7 +123,7 @@ public sealed class TimerEngine : INotifyPropertyChanged, IDisposable
 
     private int _lastObservedLevelReached = int.MinValue;
 
-    private bool _hasSeenLobbyThisSession;
+    private bool _hasSeenLobbySinceAttach;
     private bool _currentDepthClassified;
     private string? _currentDepthBiomeName;
     private string? _currentDepthBossDisplayName;
@@ -107,21 +148,21 @@ public sealed class TimerEngine : INotifyPropertyChanged, IDisposable
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
-    public string AppVersionText { get; } =
+    public string AppVersionText { get; internal set; } =
         $"v{System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "?"}";
 
     private bool _isUpdateAvailable;
     public bool IsUpdateAvailable
     {
         get => _isUpdateAvailable;
-        private set => SetField(ref _isUpdateAvailable, value);
+        internal set => SetField(ref _isUpdateAvailable, value);
     }
 
     private string? _latestVersionText;
     public string? LatestVersionText
     {
         get => _latestVersionText;
-        private set => SetField(ref _latestVersionText, value);
+        internal set => SetField(ref _latestVersionText, value);
     }
 
     public async Task<bool?> CheckForUpdateAsync()
@@ -148,20 +189,25 @@ public sealed class TimerEngine : INotifyPropertyChanged, IDisposable
     public bool IsPossibleGameMismatch
     {
         get => _isPossibleGameMismatch;
-        private set => SetField(ref _isPossibleGameMismatch, value);
+        internal set => SetField(ref _isPossibleGameMismatch, value);
     }
 
     private string? _gameMismatchDetailText;
     public string? GameMismatchDetailText
     {
         get => _gameMismatchDetailText;
-        private set => SetField(ref _gameMismatchDetailText, value);
+        internal set => SetField(ref _gameMismatchDetailText, value);
     }
 
     private bool _hasLoggedGameMismatchThisAttach;
     private int _consecutiveImplausibleTicks;
 
     private const int ImplausibleTicksThreshold = 3;
+
+    private int _consecutivePlausibleTicksAfterMismatch;
+    private bool _hasLoggedReadsValidAgainThisAttach;
+
+    private const int PlausibleTicksBeforeLoggingRecovery = 50;
 
     private void ReportPossibleGameMismatch(string reason)
     {
@@ -175,19 +221,36 @@ public sealed class TimerEngine : INotifyPropertyChanged, IDisposable
         }
     }
 
-    public TimerEngine(IGameSource? gameSource = null, string? dataDirectory = null)
+    public TimerEngine(IGameSource? gameSource = null, string? dataDirectory = null, Func<DateTime>? utcNow = null)
     {
-        _gameSource = gameSource ?? new LiveGameSource();
-
+        _clock = utcNow ?? (() => DateTime.UtcNow);
+        _tickUtc = _clock();
+        OnNewPbSound = () => PbSound.Play(PbSoundPath, PbSoundVolume);
+        _adjustedTimer = new AdjustedTimer(() => _tickUtc);
+        _loadAndCutsceneFreeTimer = new AdjustedTimer(() => _tickUtc);
         var dataDir = dataDirectory ?? Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
             "AbyssusTimer");
 
+        _gameSource = gameSource ?? new RecordingGameSource(
+            new LiveGameSource(),
+            GameRecorder.Open(Path.Combine(dataDir, "recordings"), AppVersionText, () => _tickUtc));
+
         var pbPath = Path.Combine(dataDir, "personal_bests.json");
-        _personalBests = new PersonalBests(pbPath, $"{_activeCategory}|{_activePlayerCount}");
+        _personalBests = new PersonalBests(pbPath, DataKey(_activeCategory, _activePlayerCount));
 
         var historyPath = Path.Combine(dataDir, "run_history.json");
-        _runHistory = new RunHistory(historyPath, $"{_activeCategory}|{_activePlayerCount}");
+        _runHistory = new RunHistory(historyPath, DataKey(_activeCategory, _activePlayerCount));
+
+        foreach (var key in _personalBests.CategoriesWithDroppedRunTime)
+        {
+            var restored = _runHistory.GetAttempts(key)
+                .Where(a => a.Completed && PersonalBests.IsPossibleTime(a.FinalTime))
+                .Select(a => (float?)a.FinalTime)
+                .Min();
+            _personalBests.SetBestRunTime(key, restored);
+            AppLog.Log($"Removed an impossible PB (0:00 or less) for {key}; restored {(restored is { } t ? FormatTimer(t) : "none")} from History.");
+        }
 
         var recoveryPath = Path.Combine(dataDir, "run_recovery.json");
         _runRecovery = new RunRecovery(recoveryPath);
@@ -197,24 +260,35 @@ public sealed class TimerEngine : INotifyPropertyChanged, IDisposable
         {
             _runHistory.SetActiveCategory($"{recovered.Category}|{recovered.PlayerCount}");
             _runHistory.RecordAttempt(new RunAttempt(recovered.Timestamp, Completed: false, recovered.FloorSegments.Values.Sum(), recovered.FloorSegments));
-            _runHistory.SetActiveCategory($"{_activeCategory}|{_activePlayerCount}");
+            _runHistory.SetActiveCategory(DataKey(_activeCategory, _activePlayerCount));
             _runRecovery.Clear();
             AppLog.Log($"Recovered an interrupted run — {recovered.Category}|{recovered.PlayerCount}, {recovered.FloorSegments.Count} floor(s).");
         }
 
         _session.RunStarted += () =>
         {
-            AppLog.Log($"Run started — {_activeCategory}|{_activePlayerCount}");
+            AppLog.Log($"Run started — {_activeCategory}|{_activePlayerCount} weapon={_lastStats.WeaponAssetName ?? "(none yet)"}");
             _annotatedFloorSplits.Clear();
             _currentRunCompleted = false;
+            _allWeaponLiveRunNumber = null;
+            _defeatedBiomeBosses.Clear();
+            PublishAllBossesProgress();
+            _currentRunWeapon = _lastStats.WeaponAssetName;
+            _currentRunIsAllWeapon = _activeCategory.IsAllWeapon();
+            _currentRunAnyPercentKey = _currentRunIsAllWeapon && CountAllWeaponRunsAsAnyPercent
+                ? DataKey(_activeCategory.SingleRunCategory(), _activePlayerCount)
+                : null;
 
-            _currentRunRecovery = new RunRecoveryData
+            if (!_currentRunIsAllWeapon || _currentRunAnyPercentKey is not null)
             {
-                Timestamp = DateTime.Now,
-                Category = _activeCategory.ToString(),
-                PlayerCount = _activePlayerCount.ToString(),
-            };
-            _runRecovery.Save(_currentRunRecovery);
+                _currentRunRecovery = new RunRecoveryData
+                {
+                    Timestamp = DateTime.Now,
+                    Category = (_currentRunIsAllWeapon ? _activeCategory.SingleRunCategory() : _activeCategory).ToString(),
+                    PlayerCount = _activePlayerCount.ToString(),
+                };
+                _runRecovery.Save(_currentRunRecovery);
+            }
 
             _lastObservedLevelReached = int.MinValue;
             _currentDepthClassified = false;
@@ -246,7 +320,13 @@ public sealed class TimerEngine : INotifyPropertyChanged, IDisposable
                 _runRecovery.Save(_currentRunRecovery);
             }
 
-            var isNewBest = _personalBests.TryRecordFloorSegment(split.FloorNumber, split.SegmentTime);
+            if (BiomeBaseBossNames.ContainsValue(split.BiomeName) && _defeatedBiomeBosses.Add(split.BiomeName))
+            {
+                AppLog.Log($"[All Bosses] {split.BiomeName} defeated ({_defeatedBiomeBosses.Count}/{BiomeBaseBossNames.Count}).");
+                PublishAllBossesProgress();
+            }
+
+            var isNewBest = RecordFloorSegmentForCurrentRun(split.FloorNumber, split.SegmentTime);
             if (isNewBest)
                 OnPropertyChanged(nameof(SumOfBestText));
             var roomHeraldNames = _currentDepthRoomHeraldNames.ToArray();
@@ -263,46 +343,56 @@ public sealed class TimerEngine : INotifyPropertyChanged, IDisposable
                 && string.Equals(_lastCutsceneAssetName, TorakaTrueEndingTransitionCutscene, StringComparison.OrdinalIgnoreCase);
 
             if (isTrueEndingTransition)
+            {
                 _hasDetectedTorakaSecretPhase = true;
+            }
             else
+            {
                 _currentRunCompleted = true;
+                OnAllWeaponRunCompleted(_loadAndCutsceneFreeTimer.AdjustedRunTime);
+            }
         };
         _session.RunEnded += finalTime =>
         {
-            AppLog.Log($"Run ended — {_activeCategory}|{_activePlayerCount} completed={_currentRunCompleted} finalTime={finalTime:F2}s");
+            AppLog.Log($"Run ended — {_activeCategory}|{_activePlayerCount} completed={_currentRunCompleted} finalTime={finalTime:F2}s weapon={_lastStats.WeaponAssetName ?? "(none)"}");
 
             _currentRunRecovery = null;
             _runRecovery.Clear();
 
-            if (_currentRunCompleted && _personalBests.TryRecordRunTime(finalTime) && PlaySoundOnNewPb)
+            if (_currentRunCompleted && RecordRunTimeForCurrentRun(finalTime) && PlaySoundOnNewPb)
                 OnNewPbSound();
             PreviousRunWasSuccessful = _currentRunCompleted;
             PreviousRunTime = finalTime;
             OnPropertyChanged(nameof(BestRunTimeText));
             OnPropertyChanged(nameof(HasBestRunTime));
 
-            var sessionKey = $"{_activeCategory}|{_activePlayerCount}";
-            var sessionStats = _sessionStats.TryGetValue(sessionKey, out var existingStats) ? existingStats : (Attempts: 0, Completed: 0);
-            sessionStats.Attempts++;
-            if (_currentRunCompleted)
-                sessionStats.Completed++;
-            _sessionStats[sessionKey] = sessionStats;
-            OnPropertyChanged(nameof(SessionStatsText));
+            var sessionKey = _currentRunIsAllWeapon ? _currentRunAnyPercentKey : $"{_activeCategory}|{_activePlayerCount}";
+            if (sessionKey is not null)
+                CountSessionAttempt(sessionKey, _currentRunCompleted);
 
             var finalSegmentTime = finalTime - _session.LastFloorSplitTime;
             var finalBiomeName = _currentDepthBossDisplayName ?? _currentDepthBiomeName ?? "-";
-            var finalIsNewBest = _currentRunCompleted && _personalBests.TryRecordFloorSegment(_lastStats.LevelReached, finalSegmentTime);
+            var finalIsNewBest = _currentRunCompleted && RecordFloorSegmentForCurrentRun(_lastStats.LevelReached, finalSegmentTime);
             if (finalIsNewBest)
                 OnPropertyChanged(nameof(SumOfBestText));
             var finalSplit = new FloorSplit(_lastStats.LevelReached, finalSegmentTime, finalBiomeName, _session.CurrentFloorRooms);
             var finalRoomHeraldNames = _currentDepthRoomHeraldNames.Append(_currentRoomHeraldName).ToArray();
             _annotatedFloorSplits.Add((finalSplit, finalIsNewBest, _currentDepthBossDisplayName is not null, _currentDepthEliteName, _currentDepthIsRoyalAbyssContent, _currentDepthIsTorakaContent, finalRoomHeraldNames));
 
-            var floorSegments = _annotatedFloorSplits.ToDictionary(entry => entry.Split.FloorNumber, entry => entry.Split.SegmentTime);
-            _runHistory.RecordAttempt(new RunAttempt(DateTime.Now, _currentRunCompleted, finalTime, floorSegments, _lastStats.RunTime, _adjustedTimer.AdjustedRunTime));
+            var floorSegments = _annotatedFloorSplits
+                .GroupBy(entry => entry.Split.FloorNumber)
+                .ToDictionary(group => group.Key, group => group.Sum(entry => entry.Split.SegmentTime));
+            RecordHistoryForCurrentRun(new RunAttempt(DateTime.Now, _currentRunCompleted, finalTime, floorSegments, _lastStats.RunTime, _adjustedTimer.AdjustedRunTime,
+                Weapon: _currentRunWeapon, GameVersion: _gameSource.GameVersion, GameBuild: RecordedGameBuild));
             OnPropertyChanged(nameof(AllHistoricalRuns));
             NotifyStatsChanged();
             PruneRunHistoryIfNeeded();
+
+            if (_allWeaponAttempt is { IsActive: true } && !_currentRunCompleted)
+                EndAllWeaponAttemptEarly(finalTime, "the run ended without a kill");
+
+            if (_currentRunIsAllWeapon)
+                _forceSplitsRebuild = true;
 
             if (AutoResetOnLobbyReturn)
             {
@@ -312,12 +402,260 @@ public sealed class TimerEngine : INotifyPropertyChanged, IDisposable
         };
     }
 
+    private static string DataKey(RunCategory category, PlayerCount playerCount) =>
+        category.IsAllWeapon()
+            ? $"{category}Attempts|{playerCount}"
+            : $"{category}|{playerCount}";
+
+    private bool RecordFloorSegmentForCurrentRun(int floorNumber, float segmentTime) =>
+        !_currentRunIsAllWeapon
+            ? _personalBests.TryRecordFloorSegment(floorNumber, segmentTime)
+            : _currentRunAnyPercentKey is { } key && _personalBests.TryRecordFloorSegment(key, floorNumber, segmentTime);
+
+    private bool RecordRunTimeForCurrentRun(float runTime) =>
+        !_currentRunIsAllWeapon
+            ? _personalBests.TryRecordRunTime(runTime)
+            : _currentRunAnyPercentKey is { } key && _personalBests.TryRecordRunTime(key, runTime);
+
+    private void RecordHistoryForCurrentRun(RunAttempt attempt)
+    {
+        if (!_currentRunIsAllWeapon)
+            _runHistory.RecordAttempt(attempt);
+        else if (_currentRunAnyPercentKey is { } key)
+            _runHistory.RecordAttempt(key, attempt);
+    }
+
+    private void CountSessionAttempt(string sessionKey, bool completed)
+    {
+        var sessionStats = _sessionStats.TryGetValue(sessionKey, out var existingStats) ? existingStats : (Attempts: 0, Completed: 0);
+        sessionStats.Attempts++;
+        if (completed)
+            sessionStats.Completed++;
+        _sessionStats[sessionKey] = sessionStats;
+        OnPropertyChanged(nameof(SessionStatsText));
+    }
+
+    public bool CountAllWeaponRunsAsAnyPercent { get; set; }
+
+    internal void RequestSplitsRebuildForTests() => _forceSplitsRebuild = true;
+
+    internal AllWeaponAttempt? AllWeaponAttemptForTests => _allWeaponAttempt;
+
+    public bool IsAllWeaponAttemptActive => _allWeaponAttempt?.IsActive == true;
+
+    public bool CanChangeCategory => !IsInRun && !IsAllWeaponAttemptActive;
+
+    public bool IsAllBossesView => _activeCategory == RunCategory.AllBosses;
+
+    public string AllBossesProgressText { get => _allBossesProgressText; private set { SetField(ref _allBossesProgressText, value); OnPropertyChanged("OverlayDisplayAllBossesProgressText"); } }
+    private string _allBossesProgressText = $"Biome bosses 0 / {BiomeBaseBossNames.Count}";
+
+    public string? AllBossesRemainingText { get => _allBossesRemainingText; private set { SetField(ref _allBossesRemainingText, value); OnPropertyChanged("OverlayDisplayAllBossesRemainingText"); } }
+    private string? _allBossesRemainingText = "Still needed: " + string.Join(", ", BiomeBaseBossNames.Values.Select(ShortBossName));
+
+    public bool AllBossesAllDefeated { get => _allBossesAllDefeated; private set { SetField(ref _allBossesAllDefeated, value); OnPropertyChanged("OverlayDisplayAllBossesAllDefeated"); } }
+    private bool _allBossesAllDefeated;
+
+    private static string ShortBossName(string name) => name switch
+    {
+        "The Golemancer" => "Golemancer",
+        "Captain Gwaelod" => "Gwaelod",
+        "General Kri'su" => "Kri'su",
+        "Highpriest Un'glu" => "Un'glu",
+        _ => name,
+    };
+
+    private void PublishAllBossesProgress()
+    {
+        var remaining = BiomeBaseBossNames.Values.Where(name => !_defeatedBiomeBosses.Contains(name)).ToList();
+        var allDefeated = remaining.Count == 0;
+        var progress = allDefeated
+            ? $"All {BiomeBaseBossNames.Count} biome bosses down — Royal Abyss next"
+            : $"Biome bosses {_defeatedBiomeBosses.Count} / {BiomeBaseBossNames.Count}";
+        var remainingText = allDefeated ? null : "Still needed: " + string.Join(", ", remaining.Select(ShortBossName));
+        _uiDispatcher.BeginInvoke(() =>
+        {
+            AllBossesProgressText = progress;
+            AllBossesRemainingText = remainingText;
+            AllBossesAllDefeated = allDefeated;
+        });
+    }
+
+    public bool IsAllWeaponView => _activeCategory.IsAllWeapon();
+
+    public bool OverlaySplitsVisible => SplitDetailLevel != SplitDetailLevel.Total || IsAllWeaponView;
+
+    public bool AllWeaponPreloadChecklist
+    {
+        get => _allWeaponPreloadChecklist;
+        set
+        {
+            if (_allWeaponPreloadChecklist == value)
+                return;
+            _allWeaponPreloadChecklist = value;
+            OnPropertyChanged(nameof(AllWeaponPreloadChecklist));
+            if (IsPreviewingOverlay)
+                OnPropertyChanged(nameof(OverlayDisplayWeaponGroups));
+            _forceSplitsRebuild = true;
+        }
+    }
+    private volatile bool _allWeaponPreloadChecklist;
+
+    public ObservableCollection<WeaponGroupViewModel> WeaponGroups { get; } = new();
+
+    public string AllWeaponTotalText { get => _allWeaponTotalText; private set { SetField(ref _allWeaponTotalText, value); OnPropertyChanged("OverlayDisplayAllWeaponTotalText"); } }
+    private string _allWeaponTotalText = FormatTimer(0f);
+
+    public string AllWeaponBetweenRunsText { get => _allWeaponBetweenRunsText; private set { SetField(ref _allWeaponBetweenRunsText, value); OnPropertyChanged("OverlayDisplayAllWeaponBetweenRunsText"); } }
+    private string _allWeaponBetweenRunsText = FormatTimer(0f);
+
+    public string AllWeaponProgressText { get => _allWeaponProgressText; private set { SetField(ref _allWeaponProgressText, value); OnPropertyChanged("OverlayDisplayAllWeaponProgressText"); } }
+    private string _allWeaponProgressText = $"0 / {AllWeaponAttempt.RequiredWeapons} weapons";
+
+    public string? AllWeaponCurrentWeaponName { get => _allWeaponCurrentWeaponName; private set => SetField(ref _allWeaponCurrentWeaponName, value); }
+    private string? _allWeaponCurrentWeaponName;
+
+    private (List<WeaponGroupViewModel>? Groups, string Total, string BetweenRuns, string Progress, string? CurrentWeapon) BuildAllWeaponDisplay(List<BiomeGroupViewModel>? biomeGroups)
+    {
+        var attempt = _allWeaponAttempt;
+        var liveRunTime = _loadAndCutsceneFreeTimer.AdjustedRunTime;
+
+        if (biomeGroups is not null && _allWeaponLiveRunNumber is { } live && attempt is not null)
+        {
+            while (_allWeaponRunGroups.Count <= live)
+                _allWeaponRunGroups.Add(Array.Empty<BiomeGroupViewModel>());
+            _allWeaponRunGroups[live] = biomeGroups;
+        }
+
+        var inRun = attempt?.State == AllWeaponAttemptState.InRun;
+        var groups = biomeGroups is null ? null : AllWeaponSplits.Build(
+            attempt?.Results ?? Array.Empty<WeaponRunResult>(),
+            attempt?.CurrentWeaponAssetName,
+            inRun,
+            liveRunTime,
+            _allWeaponRunGroups,
+            AllWeaponPreloadChecklist,
+            SplitDetailLevel,
+            SplitListOverflowBehavior,
+            FormatTimer);
+
+        return (
+            groups,
+            FormatTimer(attempt?.Total(liveRunTime) ?? 0f),
+            FormatTimer(attempt?.BetweenRunsTime ?? 0f),
+            $"{attempt?.CompletedWeapons.Count ?? 0} / {AllWeaponAttempt.RequiredWeapons} weapons",
+            inRun ? AllWeaponSplits.DisplayName(attempt!.CurrentWeaponAssetName) : null);
+    }
+
+    private void OnAllWeaponRunTimerStarted(string? weaponAssetName)
+    {
+        if (_allWeaponAttempt is not { IsActive: true })
+        {
+            _allWeaponAttempt = new AllWeaponAttempt();
+            _allWeaponAttempt.Tick(_tickUtc, excludeFromTime: true);
+            _allWeaponRunGroups.Clear();
+            AppLog.Log($"All Weapon% attempt started — {_activePlayerCount}");
+            OnPropertyChanged(nameof(IsAllWeaponAttemptActive));
+            OnPropertyChanged(nameof(CanChangeCategory));
+        }
+
+        _allWeaponLiveRunNumber = _allWeaponAttempt.Results.Count;
+        _allWeaponAttempt.RunTimerStarted(weaponAssetName);
+    }
+
+    private void OnAllWeaponRunCompleted(float runTime)
+    {
+        if (_allWeaponAttempt is not { State: AllWeaponAttemptState.InRun } attempt)
+            return;
+
+        var weapon = attempt.CurrentWeaponAssetName;
+
+        var wrongEnding = _activeCategory == RunCategory.AllWeaponPercentTrueEnding && !_hasDetectedTorakaSecretPhase;
+        if (wrongEnding)
+            _currentRunAnyPercentKey = null;
+
+        attempt.RunCompleted(runTime, wrongEnding);
+        _forceSplitsRebuild = true;
+        AppLog.Log($"All Weapon% run completed — weapon={weapon ?? "(unknown)"} time={runTime:F2}s weapons={attempt.CompletedWeapons.Count}/{AllWeaponAttempt.RequiredWeapons}{(wrongEnding ? " (normal ending — doesn't count for True Ending)" : "")}");
+
+        if (!wrongEnding && Weapons.FromAssetName(weapon) is not null)
+            _personalBests.TryRecordWeaponTime(weapon!, runTime);
+
+        if (attempt.IsFinished)
+            RecordAllWeaponAttempt(attempt);
+    }
+
+    private void EndAllWeaponAttemptEarly(float runTimeSoFar, string reason)
+    {
+        if (_allWeaponAttempt is not { IsActive: true } attempt)
+            return;
+
+        if (attempt.State == AllWeaponAttemptState.InRun)
+            attempt.RunEndedIncomplete(runTimeSoFar);
+        else
+            attempt.Abandon();
+
+        AppLog.Log($"All Weapon% attempt ended early — {reason}");
+        RecordAllWeaponAttempt(attempt);
+    }
+
+    private void RecordAllWeaponAttempt(AllWeaponAttempt attempt)
+    {
+        var completed = attempt.State == AllWeaponAttemptState.Completed;
+        var total = attempt.Total();
+        AppLog.Log($"All Weapon% attempt recorded — completed={completed} total={total:F2}s weapons={attempt.CompletedWeapons.Count}/{AllWeaponAttempt.RequiredWeapons} runs={attempt.Results.Count} betweenRuns={attempt.BetweenRunsTime:F2}s");
+
+        _runHistory.RecordAttempt(new RunAttempt(
+            DateTime.Now,
+            completed,
+            total,
+            new Dictionary<int, float>(),
+            WeaponRuns: attempt.Results.ToList(),
+            BetweenRunsTime: attempt.BetweenRunsTime,
+            GameVersion: _gameSource.GameVersion,
+            GameBuild: RecordedGameBuild));
+
+        if (completed && _personalBests.TryRecordRunTime(total) && PlaySoundOnNewPb)
+            OnNewPbSound();
+
+        CountSessionAttempt($"{_activeCategory}|{_activePlayerCount}", completed);
+        OnPropertyChanged(nameof(IsAllWeaponAttemptActive));
+        OnPropertyChanged(nameof(CanChangeCategory));
+        OnPropertyChanged(nameof(BestRunTimeText));
+        OnPropertyChanged(nameof(HasBestRunTime));
+        OnPropertyChanged(nameof(AllHistoricalRuns));
+        NotifyStatsChanged();
+        PruneRunHistoryIfNeeded();
+    }
+
     public bool PauseStopsTime { get; set; }
     public bool AutoResetOnLobbyReturn { get; set; } = true;
 
     public bool PlaySoundOnNewPb { get; set; } = true;
 
-    internal Action OnNewPbSound { get; set; } = () => System.Media.SystemSounds.Asterisk.Play();
+    public string? PbSoundPath
+    {
+        get => _pbSoundPath;
+        set
+        {
+            SetField(ref _pbSoundPath, string.IsNullOrWhiteSpace(value) ? null : value);
+            OnPropertyChanged(nameof(PbSoundName));
+        }
+    }
+    private string? _pbSoundPath;
+
+    public string PbSoundName => _pbSoundPath is { } path ? Path.GetFileName(path) : "Windows default sound";
+
+    public double PbSoundVolume
+    {
+        get => _pbSoundVolume;
+        set => SetField(ref _pbSoundVolume, double.IsFinite(value) ? Math.Clamp(value, 0, 1) : 0.5);
+    }
+    private double _pbSoundVolume = 0.5;
+
+    public void TestPbSound() => PbSound.Play(PbSoundPath, PbSoundVolume);
+
+    internal Action OnNewPbSound { get; set; }
 
     public bool ShowRawTimer { get => _showRawTimer; set => SetField(ref _showRawTimer, value); }
     private bool _showRawTimer = true;
@@ -370,12 +708,18 @@ public sealed class TimerEngine : INotifyPropertyChanged, IDisposable
         get => _activeCategory;
         set
         {
-            if (IsInRun || _activeCategory == value)
+            if (IsInRun || IsAllWeaponAttemptActive || _activeCategory == value)
                 return;
 
             _activeCategory = value;
             UpdatePersonalBestsCategory();
             OnPropertyChanged(nameof(ActiveCategory));
+            OnPropertyChanged(nameof(IsAllWeaponView));
+            OnPropertyChanged(nameof(IsAllBossesView));
+            OnPropertyChanged(nameof(OverlaySplitsVisible));
+            OnPropertyChanged(nameof(OverlayDisplayPrimaryTimeText));
+            OnPropertyChanged(nameof(OverlayDisplayBiomeName));
+            _forceSplitsRebuild = true;
             OnPropertyChanged(nameof(BestRunTimeText));
             OnPropertyChanged(nameof(HasBestRunTime));
             OnPropertyChanged(nameof(SumOfBestText));
@@ -388,7 +732,7 @@ public sealed class TimerEngine : INotifyPropertyChanged, IDisposable
         get => _activePlayerCount;
         set
         {
-            if (IsInRun || _activePlayerCount == value)
+            if (IsInRun || IsAllWeaponAttemptActive || _activePlayerCount == value)
                 return;
 
             _activePlayerCount = value;
@@ -426,8 +770,13 @@ public sealed class TimerEngine : INotifyPropertyChanged, IDisposable
                 return;
             _splitDetailLevel = value;
             OnPropertyChanged(nameof(SplitDetailLevel));
+            OnPropertyChanged(nameof(OverlaySplitsVisible));
+            _forceSplitsRebuild = true;
             if (IsPreviewingOverlay)
+            {
                 OnPropertyChanged(nameof(OverlayDisplaySplitGroups));
+                OnPropertyChanged(nameof(OverlayDisplayWeaponGroups));
+            }
         }
     }
     private SplitDetailLevel _splitDetailLevel = SplitDetailLevel.PerDepth;
@@ -443,8 +792,12 @@ public sealed class TimerEngine : INotifyPropertyChanged, IDisposable
                 return;
             _splitListOverflowBehavior = value;
             OnPropertyChanged(nameof(SplitListOverflowBehavior));
+            _forceSplitsRebuild = true;
             if (IsPreviewingOverlay)
+            {
                 OnPropertyChanged(nameof(OverlayDisplaySplitGroups));
+                OnPropertyChanged(nameof(OverlayDisplayWeaponGroups));
+            }
         }
     }
     private SplitListOverflowBehavior _splitListOverflowBehavior = SplitListOverflowBehavior.FullList;
@@ -452,40 +805,52 @@ public sealed class TimerEngine : INotifyPropertyChanged, IDisposable
     public IReadOnlyList<SplitListOverflowBehavior> AllSplitListOverflowBehaviors { get; } = Enum.GetValues<SplitListOverflowBehavior>();
 
     public double OverlayOpacity { get => _overlayOpacity; set => SetField(ref _overlayOpacity, value); }
-    private double _overlayOpacity = 0.90;
+    private double _overlayOpacity = OverlayAppearanceDefaults.Opacity;
 
     public double OverlayScale { get => _overlayScale; set => SetField(ref _overlayScale, value); }
-    private double _overlayScale = 1.0;
+    private double _overlayScale = OverlayAppearanceDefaults.Scale;
 
     public string? OverlayBackgroundImagePath { get => _overlayBackgroundImagePath; set => SetField(ref _overlayBackgroundImagePath, value); }
     private string? _overlayBackgroundImagePath;
 
     public double OverlayBiomeFontSize { get => _overlayBiomeFontSize; set => SetField(ref _overlayBiomeFontSize, value); }
-    private double _overlayBiomeFontSize = 11;
+    private double _overlayBiomeFontSize = OverlayAppearanceDefaults.BiomeFontSize;
 
     public double OverlayDepthFontSize { get => _overlayDepthFontSize; set => SetField(ref _overlayDepthFontSize, value); }
-    private double _overlayDepthFontSize = 11;
+    private double _overlayDepthFontSize = OverlayAppearanceDefaults.DepthFontSize;
 
     public double OverlayFloorFontSize { get => _overlayFloorFontSize; set => SetField(ref _overlayFloorFontSize, value); }
-    private double _overlayFloorFontSize = 10;
+    private double _overlayFloorFontSize = OverlayAppearanceDefaults.FloorFontSize;
 
     public bool OverlayTimesHaveBackground { get => _overlayTimesHaveBackground; set => SetField(ref _overlayTimesHaveBackground, value); }
-    private bool _overlayTimesHaveBackground;
+    private bool _overlayTimesHaveBackground = OverlayAppearanceDefaults.TimesHaveBackground;
 
     public string OverlayBiomeTextColor { get => _overlayBiomeTextColor; set => SetField(ref _overlayBiomeTextColor, value); }
-    private string _overlayBiomeTextColor = "#C98F3F";
+    private string _overlayBiomeTextColor = OverlayAppearanceDefaults.BiomeTextColor;
 
     public string OverlayDepthTextColor { get => _overlayDepthTextColor; set => SetField(ref _overlayDepthTextColor, value); }
-    private string _overlayDepthTextColor = "#8A9994";
+    private string _overlayDepthTextColor = OverlayAppearanceDefaults.DepthTextColor;
 
     public string OverlayFloorTextColor { get => _overlayFloorTextColor; set => SetField(ref _overlayFloorTextColor, value); }
-    private string _overlayFloorTextColor = "#56635E";
+    private string _overlayFloorTextColor = OverlayAppearanceDefaults.FloorTextColor;
+
+    public double OverlayWeaponFontSize { get => _overlayWeaponFontSize; set => SetField(ref _overlayWeaponFontSize, value); }
+    private double _overlayWeaponFontSize = OverlayAppearanceDefaults.WeaponFontSize;
+
+    public string OverlayWeaponTextColor { get => _overlayWeaponTextColor; set => SetField(ref _overlayWeaponTextColor, value); }
+    private string _overlayWeaponTextColor = OverlayAppearanceDefaults.WeaponTextColor;
+
+    public double OverlayStatusFontSize { get => _overlayStatusFontSize; set => SetField(ref _overlayStatusFontSize, value); }
+    private double _overlayStatusFontSize = OverlayAppearanceDefaults.StatusFontSize;
+
+    public string OverlayStatusTextColor { get => _overlayStatusTextColor; set => SetField(ref _overlayStatusTextColor, value); }
+    private string _overlayStatusTextColor = OverlayAppearanceDefaults.StatusTextColor;
 
     public double OverlayTitleFontSize { get => _overlayTitleFontSize; set => SetField(ref _overlayTitleFontSize, value); }
-    private double _overlayTitleFontSize = 11;
+    private double _overlayTitleFontSize = OverlayAppearanceDefaults.TitleFontSize;
 
     public string OverlayTitleTextColor { get => _overlayTitleTextColor; set => SetField(ref _overlayTitleTextColor, value); }
-    private string _overlayTitleTextColor = "#C98F3F";
+    private string _overlayTitleTextColor = OverlayAppearanceDefaults.TitleTextColor;
 
     public bool IsPreviewingOverlay
     {
@@ -496,9 +861,8 @@ public sealed class TimerEngine : INotifyPropertyChanged, IDisposable
                 return;
             _isPreviewingOverlay = value;
             OnPropertyChanged(nameof(IsPreviewingOverlay));
-            OnPropertyChanged(nameof(OverlayDisplaySplitGroups));
-            OnPropertyChanged(nameof(OverlayDisplayBiomeName));
-            OnPropertyChanged(nameof(OverlayDisplayPrimaryTimeText));
+            foreach (var name in OverlayDisplayProperties)
+                OnPropertyChanged(name);
         }
     }
     private bool _isPreviewingOverlay;
@@ -506,9 +870,42 @@ public sealed class TimerEngine : INotifyPropertyChanged, IDisposable
     public IReadOnlyList<BiomeGroupViewModel> OverlayDisplaySplitGroups =>
         IsPreviewingOverlay ? BuildPreviewSplitGroups() : SplitGroups;
 
-    public string OverlayDisplayBiomeName => IsPreviewingOverlay ? "Sunken Gardens" : CurrentBiomeName;
+    public string OverlayDisplayBiomeName =>
+        IsPreviewingOverlay ? "Sunken Gardens"
+        : IsAllWeaponView && AllWeaponCurrentWeaponName is { } weapon ? $"{weapon} · {CurrentBiomeName}"
+        : !IsInRun && IsAttached ? "Lobby"
+        : CurrentBiomeName;
 
-    public string OverlayDisplayPrimaryTimeText => IsPreviewingOverlay ? "8:42.15" : PrimaryTimeText;
+    public IReadOnlyList<WeaponGroupViewModel> OverlayDisplayWeaponGroups => IsPreviewingOverlay ? BuildPreviewWeaponGroups() : WeaponGroups;
+    public string OverlayDisplayAllWeaponBetweenRunsText => IsPreviewingOverlay ? "0:42.10" : AllWeaponBetweenRunsText;
+    public string OverlayDisplayAllWeaponProgressText => IsPreviewingOverlay ? $"1 / {AllWeaponAttempt.RequiredWeapons} weapons" : AllWeaponProgressText;
+    public string OverlayDisplayAllBossesProgressText => IsPreviewingOverlay ? $"Biome bosses 2 / {BiomeBaseBossNames.Count}" : AllBossesProgressText;
+    public string? OverlayDisplayAllBossesRemainingText => IsPreviewingOverlay ? "Still needed: Gwaelod, Un'glu" : AllBossesRemainingText;
+    public bool OverlayDisplayAllBossesAllDefeated => !IsPreviewingOverlay && AllBossesAllDefeated;
+
+    private List<WeaponGroupViewModel> BuildPreviewWeaponGroups() =>
+        AllWeaponSplits.Build(
+            new[] { new WeaponRunResult("PA_CombatBow", 441.3f, Completed: true, CountsTowardTotal: true) },
+            "PA_Shotgun",
+            isInRun: true,
+            currentRunTime: 522.15f,
+            new IReadOnlyList<BiomeGroupViewModel>[] { Array.Empty<BiomeGroupViewModel>(), BuildPreviewSplitGroups() },
+            AllWeaponPreloadChecklist,
+            SplitDetailLevel,
+            SplitListOverflowBehavior,
+            FormatTimer);
+
+    private static readonly string[] OverlayDisplayProperties =
+    {
+        nameof(OverlayDisplaySplitGroups), nameof(OverlayDisplayBiomeName), nameof(OverlayDisplayPrimaryTimeText),
+        nameof(OverlayDisplayWeaponGroups), nameof(OverlayDisplayAllWeaponBetweenRunsText), nameof(OverlayDisplayAllWeaponProgressText),
+        nameof(OverlayDisplayAllBossesProgressText), nameof(OverlayDisplayAllBossesRemainingText), nameof(OverlayDisplayAllBossesAllDefeated),
+    };
+
+    public string OverlayDisplayPrimaryTimeText =>
+        IsPreviewingOverlay ? "8:42.15"
+        : IsAllWeaponView ? AllWeaponTotalText
+        : PrimaryTimeText;
 
     private List<BiomeGroupViewModel> BuildPreviewSplitGroups()
     {
@@ -549,23 +946,27 @@ public sealed class TimerEngine : INotifyPropertyChanged, IDisposable
 
     public void ResetOverlayAppearanceToDefaults()
     {
-        OverlayOpacity = 0.90;
-        OverlayScale = 1.0;
+        OverlayOpacity = OverlayAppearanceDefaults.Opacity;
+        OverlayScale = OverlayAppearanceDefaults.Scale;
         OverlayBackgroundImagePath = null;
-        OverlayBiomeFontSize = 11;
-        OverlayDepthFontSize = 11;
-        OverlayFloorFontSize = 10;
-        OverlayTimesHaveBackground = false;
-        OverlayBiomeTextColor = "#C98F3F";
-        OverlayDepthTextColor = "#8A9994";
-        OverlayFloorTextColor = "#56635E";
-        OverlayTitleFontSize = 11;
-        OverlayTitleTextColor = "#C98F3F";
+        OverlayBiomeFontSize = OverlayAppearanceDefaults.BiomeFontSize;
+        OverlayDepthFontSize = OverlayAppearanceDefaults.DepthFontSize;
+        OverlayFloorFontSize = OverlayAppearanceDefaults.FloorFontSize;
+        OverlayTimesHaveBackground = OverlayAppearanceDefaults.TimesHaveBackground;
+        OverlayBiomeTextColor = OverlayAppearanceDefaults.BiomeTextColor;
+        OverlayDepthTextColor = OverlayAppearanceDefaults.DepthTextColor;
+        OverlayFloorTextColor = OverlayAppearanceDefaults.FloorTextColor;
+        OverlayTitleFontSize = OverlayAppearanceDefaults.TitleFontSize;
+        OverlayTitleTextColor = OverlayAppearanceDefaults.TitleTextColor;
+        OverlayWeaponFontSize = OverlayAppearanceDefaults.WeaponFontSize;
+        OverlayWeaponTextColor = OverlayAppearanceDefaults.WeaponTextColor;
+        OverlayStatusFontSize = OverlayAppearanceDefaults.StatusFontSize;
+        OverlayStatusTextColor = OverlayAppearanceDefaults.StatusTextColor;
     }
 
     private void UpdatePersonalBestsCategory()
     {
-        var key = $"{_activeCategory}|{_activePlayerCount}";
+        var key = DataKey(_activeCategory, _activePlayerCount);
         _personalBests.SetActiveCategory(key);
         _runHistory.SetActiveCategory(key);
         OnPropertyChanged(nameof(SessionStatsText));
@@ -579,6 +980,7 @@ public sealed class TimerEngine : INotifyPropertyChanged, IDisposable
         _selectedRunHistoryDetailIndex = null;
         OnPropertyChanged(nameof(SelectedRunHistoryDetailIndex));
         OnPropertyChanged(nameof(SelectedRunHistoryDetailSummary));
+        OnPropertyChanged(nameof(SelectedRunHistoryDetailInfo));
         OnPropertyChanged(nameof(SelectedRunHistoryDetailRows));
     }
 
@@ -598,8 +1000,16 @@ public sealed class TimerEngine : INotifyPropertyChanged, IDisposable
     public IReadOnlyList<PlayerCount> AllPlayerCounts { get; } = Enum.GetValues<PlayerCount>();
 
     public IReadOnlyList<HistoricalRunOption> AllHistoricalRuns => _runHistory.GetAttempts()
-        .Select((attempt, index) => new HistoricalRunOption(index,
-            $"{attempt.Timestamp:g} — {(attempt.Completed ? "Completed" : "Incomplete")} — {FormatTimer(attempt.FinalTime)}"))
+        .Select((attempt, index) =>
+        {
+            var time = FormatTimer(attempt.FinalTime);
+            var result = $"{(attempt.Completed ? "Completed" : "Incomplete")} — {time}";
+            return new HistoricalRunOption(index,
+                $"{attempt.Timestamp:g} — {result}",
+                $"{attempt.Timestamp:g}",
+                result,
+                $"{time} — {attempt.Timestamp:MMM d}, {attempt.Timestamp:t}{(attempt.Completed ? "" : " · incomplete")}");
+        })
         .ToList();
 
     public IReadOnlyList<LocationStatsRow> StatsPerLocationRows
@@ -665,25 +1075,56 @@ public sealed class TimerEngine : INotifyPropertyChanged, IDisposable
 
     private List<PbChartMarker> ComputePbChartMarkers()
     {
-        var rows = StatsPbProgressionRows;
+        var runs = PbChartRuns();
         var markers = new List<PbChartMarker>();
-        if (rows.Count < 2)
+        if (runs.Count < 2)
             return markers;
 
-        var min = rows.Min(r => r.FinalTimeSeconds);
-        var max = rows.Max(r => r.FinalTimeSeconds);
+        var min = runs.Min(r => r.Attempt.FinalTime);
+        var max = runs.Max(r => r.Attempt.FinalTime);
         var range = max - min;
 
-        for (var i = 0; i < rows.Count; i++)
+        for (var i = 0; i < runs.Count; i++)
         {
-            var x = PbChartWidth * i / (rows.Count - 1);
-            var t = range > 0 ? (rows[i].FinalTimeSeconds - min) / range : 0.5;
+            var x = PbChartWidth * i / (runs.Count - 1);
+            var t = range > 0 ? (runs[i].Attempt.FinalTime - min) / range : 0.5;
             var y = PbChartHeight * (1 - t);
-            markers.Add(new PbChartMarker(x, y, rows[i].DateText, rows[i].TimeText));
+            markers.Add(new PbChartMarker(x, y, runs[i].Attempt.Timestamp.ToString("g"), FormatTimer(runs[i].Attempt.FinalTime), runs[i].IsPb));
         }
 
         return markers;
     }
+
+    private List<(RunAttempt Attempt, bool IsPb)> PbChartRuns()
+    {
+        var runs = new List<(RunAttempt Attempt, bool IsPb)>();
+        float? runningBest = null;
+        foreach (var attempt in _runHistory.GetAttempts().Where(a => a.Completed).OrderBy(a => a.Timestamp))
+        {
+            var isPb = runningBest is not { } best || attempt.FinalTime < best;
+            if (isPb)
+                runningBest = attempt.FinalTime;
+            runs.Add((attempt, isPb));
+        }
+
+        return runs.Count <= PbChartRunCount ? runs : runs.GetRange(runs.Count - PbChartRunCount, PbChartRunCount);
+    }
+
+    public int PbChartRunCount
+    {
+        get => _pbChartRunCount;
+        set
+        {
+            if (_pbChartRunCount == value || !AllPbChartRunCounts.Contains(value))
+                return;
+            _pbChartRunCount = value;
+            OnPropertyChanged(nameof(PbChartRunCount));
+            NotifyStatsChanged();
+        }
+    }
+    private int _pbChartRunCount = 25;
+
+    public IReadOnlyList<int> AllPbChartRunCounts { get; } = [10, 25, 50, 100];
 
     public System.Windows.Media.PointCollection StatsPbProgressionChartPoints
     {
@@ -698,8 +1139,8 @@ public sealed class TimerEngine : INotifyPropertyChanged, IDisposable
 
     public IReadOnlyList<PbChartMarker> StatsPbProgressionChartMarkers => ComputePbChartMarkers();
 
-    public string StatsPbProgressionChartMaxTimeText => FormatTimer(StatsPbProgressionRows.Count > 0 ? StatsPbProgressionRows.Max(r => r.FinalTimeSeconds) : 0f);
-    public string StatsPbProgressionChartMinTimeText => FormatTimer(StatsPbProgressionRows.Count > 0 ? StatsPbProgressionRows.Min(r => r.FinalTimeSeconds) : 0f);
+    public string StatsPbProgressionChartMaxTimeText => PbChartRuns() is { Count: > 0 } runs ? FormatTimer(runs.Max(r => r.Attempt.FinalTime)) : FormatTimer(0f);
+    public string StatsPbProgressionChartMinTimeText => PbChartRuns() is { Count: > 0 } runs ? FormatTimer(runs.Min(r => r.Attempt.FinalTime)) : FormatTimer(0f);
 
     public IReadOnlyList<AttemptsReachedRow> StatsAttemptsReachedRows
     {
@@ -804,7 +1245,12 @@ public sealed class TimerEngine : INotifyPropertyChanged, IDisposable
             new Dictionary<int, float>(attempt.FloorSegments),
             AppVersionText,
             attempt.RawFinalTime,
-            attempt.LoadFreeFinalTime);
+            attempt.LoadFreeFinalTime,
+            attempt.Weapon,
+            attempt.GameVersion,
+            attempt.GameBuild,
+            attempt.WeaponRuns,
+            attempt.BetweenRunsTime);
 
         File.WriteAllText(filePath, System.Text.Json.JsonSerializer.Serialize(file, new System.Text.Json.JsonSerializerOptions { WriteIndented = true }));
     }
@@ -818,11 +1264,11 @@ public sealed class TimerEngine : INotifyPropertyChanged, IDisposable
         var attempt = attempts[historicalRunIndex];
         var lines = new List<string>
         {
-            $"Abyssplit — {ActiveCategory.DisplayName()} {ActivePlayerCount} — {FormatTimer(attempt.FinalTime)} ({(attempt.Completed ? "Completed" : "Incomplete")})",
+            $"Abyssplit {AppVersionText} — {ActiveCategory.DisplayName()} {ActivePlayerCount} — {FormatTimer(attempt.FinalTime)} ({(attempt.Completed ? "Completed" : "Incomplete")})",
+            $"{attempt.Timestamp:g}",
         };
-        lines.AddRange(attempt.FloorSegments
-            .OrderBy(kv => kv.Key)
-            .Select(kv => $"Depth {DisplayDepthNumber(kv.Key)}: {FormatTimer(kv.Value)}"));
+        lines.AddRange(SubmissionDetails(attempt));
+        lines.AddRange(DetailRows(attempt).Select(row => $"{row.Label}: {row.TimeText}"));
 
         return string.Join(Environment.NewLine, lines);
     }
@@ -881,6 +1327,7 @@ public sealed class TimerEngine : INotifyPropertyChanged, IDisposable
         _selectedRunHistoryDetailIndex = AdjustIndexAfterDelete(_selectedRunHistoryDetailIndex, index);
         OnPropertyChanged(nameof(SelectedRunHistoryDetailIndex));
         OnPropertyChanged(nameof(SelectedRunHistoryDetailSummary));
+        OnPropertyChanged(nameof(SelectedRunHistoryDetailInfo));
         OnPropertyChanged(nameof(SelectedRunHistoryDetailRows));
 
         OnPropertyChanged(nameof(AllHistoricalRuns));
@@ -980,6 +1427,7 @@ public sealed class TimerEngine : INotifyPropertyChanged, IDisposable
         _selectedRunHistoryDetailIndex = AdjustIndexAfterBulkDelete(_selectedRunHistoryDetailIndex, indicesToDelete);
         OnPropertyChanged(nameof(SelectedRunHistoryDetailIndex));
         OnPropertyChanged(nameof(SelectedRunHistoryDetailSummary));
+        OnPropertyChanged(nameof(SelectedRunHistoryDetailInfo));
         OnPropertyChanged(nameof(SelectedRunHistoryDetailRows));
 
         OnPropertyChanged(nameof(AllHistoricalRuns));
@@ -1008,6 +1456,7 @@ public sealed class TimerEngine : INotifyPropertyChanged, IDisposable
             _selectedRunHistoryDetailIndex = value;
             OnPropertyChanged(nameof(SelectedRunHistoryDetailIndex));
             OnPropertyChanged(nameof(SelectedRunHistoryDetailSummary));
+            OnPropertyChanged(nameof(SelectedRunHistoryDetailInfo));
             OnPropertyChanged(nameof(SelectedRunHistoryDetailRows));
         }
     }
@@ -1024,22 +1473,60 @@ public sealed class TimerEngine : INotifyPropertyChanged, IDisposable
         }
     }
 
-    public IReadOnlyList<RunHistoryDetailRow> SelectedRunHistoryDetailRows
+    public string? SelectedRunHistoryDetailInfo => SelectedAttempt is { } attempt
+        ? string.Join(Environment.NewLine, SubmissionDetails(attempt))
+        : null;
+
+    private RunAttempt? SelectedAttempt
     {
         get
         {
-            if (_selectedRunHistoryDetailIndex is not { } index)
-                return Array.Empty<RunHistoryDetailRow>();
-
             var attempts = _runHistory.GetAttempts();
-            if (index < 0 || index >= attempts.Count)
-                return Array.Empty<RunHistoryDetailRow>();
+            return _selectedRunHistoryDetailIndex is { } index && index >= 0 && index < attempts.Count ? attempts[index] : null;
+        }
+    }
 
-            return attempts[index].FloorSegments
-                .OrderBy(kv => kv.Key)
-                .Select(kv => new RunHistoryDetailRow($"Depth {DisplayDepthNumber(kv.Key)}", FormatTimer(kv.Value)))
+    public IReadOnlyList<RunHistoryDetailRow> SelectedRunHistoryDetailRows =>
+        SelectedAttempt is { } attempt ? DetailRows(attempt) : Array.Empty<RunHistoryDetailRow>();
+
+    private IReadOnlyList<RunHistoryDetailRow> DetailRows(RunAttempt attempt)
+    {
+        if (attempt.WeaponRuns is { } weaponRuns)
+        {
+            return weaponRuns
+                .Select(run => new RunHistoryDetailRow(
+                    AllWeaponSplits.DisplayName(run.WeaponAssetName) + (AllWeaponSplits.RunNote(run) is { } note ? $" ({note})" : ""),
+                    FormatTimer(run.Time)))
+                .Append(new RunHistoryDetailRow("Between runs", FormatTimer(attempt.BetweenRunsTime ?? 0f)))
                 .ToList();
         }
+
+        return attempt.FloorSegments
+            .OrderBy(kv => kv.Key)
+            .Select(kv => new RunHistoryDetailRow($"Depth {DisplayDepthNumber(kv.Key)}", FormatTimer(kv.Value)))
+            .ToList();
+    }
+
+    private IEnumerable<string> SubmissionDetails(RunAttempt attempt)
+    {
+        if (attempt.WeaponRuns is not null)
+            yield return $"Attempt total {FormatTimer(attempt.FinalTime)}";
+        else
+        {
+            var times = new List<string> { $"Load+Cutscene-Free {FormatTimer(attempt.FinalTime)}" };
+            if (attempt.LoadFreeFinalTime is { } loadFree)
+                times.Add($"Load-Free {FormatTimer(loadFree)}");
+            if (attempt.RawFinalTime is { } igt)
+                times.Add($"IGT {FormatTimer(igt)}");
+            yield return string.Join(" · ", times);
+        }
+
+        if (attempt.Weapon is { } weapon)
+            yield return $"Weapon: {AllWeaponSplits.DisplayName(weapon)}";
+        if (attempt.GameVersion is { } gameVersion)
+            yield return $"Game version: {gameVersion}";
+        if (attempt.GameBuild is { } gameBuild)
+            yield return $"Store build: {gameBuild}";
     }
 
     public string PrimaryTimeText => SelectedPrimaryTimer switch
@@ -1094,7 +1581,17 @@ public sealed class TimerEngine : INotifyPropertyChanged, IDisposable
 
     public bool ShouldOverlayBeVisible => AlwaysShowOverlay || IsAttached || IsConfiguratorVisible;
 
-    public bool IsInRun { get => _isInRun; private set => SetField(ref _isInRun, value); }
+    public bool IsInRun
+    {
+        get => _isInRun;
+        private set
+        {
+            if (_isInRun == value)
+                return;
+            SetField(ref _isInRun, value);
+            OnPropertyChanged(nameof(CanChangeCategory));
+        }
+    }
     private bool _isInRun;
 
     public bool IsLoading { get => _isLoading; private set => SetField(ref _isLoading, value); }
@@ -1176,10 +1673,107 @@ public sealed class TimerEngine : INotifyPropertyChanged, IDisposable
     {
         lock (_tickLock)
         {
+            EndAllWeaponAttemptEarly(_loadAndCutsceneFreeTimer.AdjustedRunTime, "reset");
+            _runHold = null;
             _adjustedTimer.Reset();
             _loadAndCutsceneFreeTimer.Reset();
             _session.ForceReset(_lastStats.LevelReached, _lastStats.RoomReached);
+            (_gameSource as RecordingGameSource)?.Recorder.RecordResetRun();
         }
+    }
+
+    private AbyssusStats ApplyRunHold(AbyssusStats raw, GameFrame frame)
+    {
+        var previousRunTime = _previousTickRunTime;
+        var previousIsInRun = _previousTickIsInRun;
+        var previousLevel = _previousTickLevelReached;
+        var previousRoom = _previousTickRoomReached;
+        _previousTickRunTime = raw.RunTime;
+        _previousTickIsInRun = raw.IsInRun;
+        _previousTickLevelReached = raw.LevelReached;
+        _previousTickRoomReached = raw.RoomReached;
+
+        if (_runHold is null)
+        {
+            if (!(_hasSeenLobbySinceAttach && _session.IsRunActive && raw.IsInRun && previousIsInRun && raw.RunTime < previousRunTime))
+                return raw;
+
+            _runHold = new RunHold(previousRunTime, previousLevel, previousRoom, raw.RunTime,
+                new AdjustedTimer(() => _tickUtc), new AdjustedTimer(() => _tickUtc));
+            AppLog.Log($"[Run hold] The game's run clock went back from {previousRunTime:F2}s to {raw.RunTime:F2}s while still in a run (depth {previousLevel} -> {raw.LevelReached}) — holding the run's last values until it ends.");
+        }
+
+        var held = _runHold;
+
+        if (!raw.IsInRun)
+        {
+            _runHold = null;
+            AppLog.Log("[Run hold] The run ended; it was recorded with its held values.");
+            return raw with { RunTime = held.RunTime, LevelReached = held.LevelReached, RoomReached = held.RoomReached };
+        }
+
+        var inLobby = raw.CurrentLevelIds.Any(id => id.Equals("Lobby", StringComparison.OrdinalIgnoreCase));
+        if (!inLobby && raw.RunTime - held.RunTimeAtDrop >= RunHoldNewRunClockSeconds)
+        {
+            _runHold = null;
+            AppLog.Log($"[Run hold] The game's clock kept running outside the Lobby ({raw.RunTime:F2}s) — treating it as a new run. The previous run was recorded with its held values.");
+            _lastStats = raw with { IsInRun = false, RunTime = held.RunTime, LevelReached = held.LevelReached, RoomReached = held.RoomReached };
+            _session.Update(false, raw.RunSuccessful, held.LevelReached, held.RoomReached, _loadAndCutsceneFreeTimer.AdjustedRunTime,
+                _currentDepthBossDisplayName ?? _currentDepthBiomeName ?? "-");
+            _adjustedTimer = held.StandbyLoadFree;
+            _loadAndCutsceneFreeTimer = held.StandbyLoadCutsceneFree;
+            _currentRunCompleted = false;
+            return raw;
+        }
+
+        return raw with { RunTime = held.RunTime, LevelReached = held.LevelReached, RoomReached = held.RoomReached };
+    }
+
+    private void UpdateJoinedMidRun(AbyssusStats stats)
+    {
+        if (_hasSeenLobbySinceAttach)
+        {
+            _midRunEvidenceStartRunTime = null;
+            _joinedMidRunThisAttach = false;
+        }
+        else if (!_joinedMidRunThisAttach)
+        {
+            if (stats.IsInRun && AbyssusStatsValidator.TryValidate(stats, out _))
+            {
+                _midRunEvidenceStartRunTime ??= stats.RunTime;
+                if (stats.RunTime - _midRunEvidenceStartRunTime >= MidRunEvidenceClockSeconds)
+                {
+                    _joinedMidRunThisAttach = true;
+                    AppLog.Log("Joined mid-run — this run can't be timed (only IGT moves); timing starts with the next run from the Lobby.");
+                }
+            }
+            else
+            {
+                _midRunEvidenceStartRunTime = null;
+            }
+        }
+
+        if (_joinedMidRunThisAttach == _publishedJoinedMidRun)
+            return;
+        var joined = _publishedJoinedMidRun = _joinedMidRunThisAttach;
+        _uiDispatcher.BeginInvoke(() => IsJoinedMidRun = joined);
+    }
+
+    private bool _publishedJoinedMidRun;
+
+    private (bool PauseStopsTime, bool AutoReset, RunCategory Category, PlayerCount PlayerCount)? _recordedContext;
+
+    private void RecordContextIfChanged()
+    {
+        if (_gameSource is not RecordingGameSource recording)
+            return;
+
+        var context = (PauseStopsTime, AutoResetOnLobbyReturn, _activeCategory, _activePlayerCount);
+        if (_recordedContext == context)
+            return;
+
+        _recordedContext = context;
+        recording.Recorder.RecordContext(PauseStopsTime, AutoResetOnLobbyReturn, _activeCategory.ToString(), _activePlayerCount.ToString());
     }
 
     public void Tick()
@@ -1197,8 +1791,11 @@ public sealed class TimerEngine : INotifyPropertyChanged, IDisposable
 
         lock (_tickLock)
         {
+        _tickUtc = _clock();
+
         if (!_gameSource.IsAttached || !_gameSource.IsProcessAlive())
         {
+            EndAllWeaponAttemptEarly(_loadAndCutsceneFreeTimer.AdjustedRunTime, "the game closed");
             _gameSource.OnDetached();
 
             if (_wasAttachedForLog)
@@ -1211,7 +1808,12 @@ public sealed class TimerEngine : INotifyPropertyChanged, IDisposable
             {
                 _adjustedTimer.Reset();
                 _loadAndCutsceneFreeTimer.Reset();
-                _uiDispatcher.BeginInvoke(() => IsAttached = false);
+                _publishedJoinedMidRun = false;
+                _uiDispatcher.BeginInvoke(() =>
+                {
+                    IsAttached = false;
+                    IsJoinedMidRun = false;
+                });
                 return;
             }
 
@@ -1227,11 +1829,19 @@ public sealed class TimerEngine : INotifyPropertyChanged, IDisposable
             }
 
             _wasAttachedForLog = true;
+            _hasLoggedGameVersionThisAttach = false;
 
             IsPossibleGameMismatch = false;
             GameMismatchDetailText = null;
             _hasLoggedGameMismatchThisAttach = false;
             _consecutiveImplausibleTicks = 0;
+            _consecutivePlausibleTicksAfterMismatch = 0;
+            _hasLoggedReadsValidAgainThisAttach = false;
+            _hasSeenLobbySinceAttach = false;
+            _runHold = null;
+            _previousTickIsInRun = false;
+            _midRunEvidenceStartRunTime = null;
+            _joinedMidRunThisAttach = false;
 
             if (GameVersionChecker.TryCheckVersion(_gameSource.ExecutablePath, GameOffsets.LastVerifiedGameVersion) == false)
             {
@@ -1251,22 +1861,38 @@ public sealed class TimerEngine : INotifyPropertyChanged, IDisposable
 
         try
         {
+            RecordContextIfChanged();
+
             var statsReadStopwatch = Stopwatch.StartNew();
             if (!_gameSource.TryReadFrame(out var frame))
                 return;
             statsReadMs = statsReadStopwatch.Elapsed.TotalMilliseconds;
 
-            var stats = frame.Stats;
+            var rawStats = frame.Stats;
+            var stats = ApplyRunHold(rawStats, frame);
             _lastStats = stats;
             _lastCutsceneAssetName = frame.CurrentCutsceneAssetName;
 
-            if (AbyssusStatsValidator.TryValidate(stats, out var implausibleReason))
+            if (!_hasSeenLobbySinceAttach)
             {
                 _consecutiveImplausibleTicks = 0;
             }
-            else if (++_consecutiveImplausibleTicks >= ImplausibleTicksThreshold)
+            else if (AbyssusStatsValidator.TryValidate(stats, out var implausibleReason))
             {
-                ReportPossibleGameMismatch($"Implausible game data read ({implausibleReason}) — possible memory-offset mismatch after a game update.");
+                _consecutiveImplausibleTicks = 0;
+
+                if (IsPossibleGameMismatch && !_hasLoggedReadsValidAgainThisAttach
+                    && ++_consecutivePlausibleTicksAfterMismatch >= PlausibleTicksBeforeLoggingRecovery)
+                {
+                    AppLog.Log("[Possible mismatch] Game data has read as valid again for 1 s.");
+                    _hasLoggedReadsValidAgainThisAttach = true;
+                }
+            }
+            else
+            {
+                _consecutivePlausibleTicksAfterMismatch = 0;
+                if (++_consecutiveImplausibleTicks >= ImplausibleTicksThreshold)
+                    ReportPossibleGameMismatch($"Implausible game data read ({implausibleReason}) — possible memory-offset mismatch after a game update.");
             }
 
 #if TRUSTED_BUILD
@@ -1311,22 +1937,50 @@ public sealed class TimerEngine : INotifyPropertyChanged, IDisposable
                 && string.Equals(currentCutsceneAssetName, TorakaSecretPhaseDeathCutscene, StringComparison.OrdinalIgnoreCase))
             {
                 _currentRunCompleted = true;
+                OnAllWeaponRunCompleted(_loadAndCutsceneFreeTimer.AdjustedRunTime);
             }
+
+            _allWeaponAttempt?.Tick(_tickUtc, excludeFromTime: stats.IsLoading || (PauseStopsTime && stats.IsPaused));
 
             var restOfTickStopwatch = Stopwatch.StartNew();
 
             var pauseExclusion = PauseStopsTime && stats.IsPaused;
-            var countThroughStall = !PauseStopsTime;
+            var countThroughStall = !PauseStopsTime && stats.IsPaused;
             var notInRunExclusion = !stats.IsInRun;
 
-            var notYetSeenLobbyExclusion = !_hasSeenLobbyThisSession;
+            var notYetSeenLobbyExclusion = !_hasSeenLobbySinceAttach;
 
-            _adjustedTimer.Update(stats.RunTime, stats.IsInRun, stats.IsLoading, stats.IsLoading || pauseExclusion || notInRunExclusion || _currentRunCompleted || notYetSeenLobbyExclusion, countThroughStall);
+            var heldExclusion = _runHold is not null;
+            _adjustedTimer.Update(stats.RunTime, stats.IsInRun, stats.IsLoading, stats.IsLoading || pauseExclusion || notInRunExclusion || _currentRunCompleted || notYetSeenLobbyExclusion || heldExclusion, countThroughStall);
 
             cutsceneCheckStopwatch.Restart();
             var isCutscenePlaying = frame.IsCutscenePlaying;
             cutsceneCheckMs += cutsceneCheckStopwatch.Elapsed.TotalMilliseconds;
-            _loadAndCutsceneFreeTimer.Update(stats.RunTime, stats.IsInRun, stats.IsLoading, stats.IsLoading || isCutscenePlaying || pauseExclusion || notInRunExclusion || _currentRunCompleted || notYetSeenLobbyExclusion, countThroughStall);
+            var runTimerHadStarted = _loadAndCutsceneFreeTimer.HasStarted;
+            _loadAndCutsceneFreeTimer.Update(stats.RunTime, stats.IsInRun, stats.IsLoading, stats.IsLoading || isCutscenePlaying || pauseExclusion || notInRunExclusion || _currentRunCompleted || notYetSeenLobbyExclusion || heldExclusion, countThroughStall);
+
+            if (_runHold is { } hold)
+            {
+                var rawPauseExclusion = PauseStopsTime && rawStats.IsPaused;
+                var rawCountThroughStall = !PauseStopsTime && rawStats.IsPaused;
+                hold.StandbyLoadFree.Update(rawStats.RunTime, rawStats.IsInRun, rawStats.IsLoading, rawStats.IsLoading || rawPauseExclusion || !rawStats.IsInRun, rawCountThroughStall);
+                hold.StandbyLoadCutsceneFree.Update(rawStats.RunTime, rawStats.IsInRun, rawStats.IsLoading, rawStats.IsLoading || isCutscenePlaying || rawPauseExclusion || !rawStats.IsInRun, rawCountThroughStall);
+            }
+
+            if (_session.IsRunActive && stats.WeaponAssetName is { } runWeapon)
+                _currentRunWeapon = runWeapon;
+
+            if (!_hasLoggedGameVersionThisAttach && _gameSource.GameVersion is { } gameVersion)
+            {
+                _hasLoggedGameVersionThisAttach = true;
+                AppLog.Log($"Game version {gameVersion}.");
+            }
+
+            if (!runTimerHadStarted && _loadAndCutsceneFreeTimer.HasStarted && _currentRunIsAllWeapon
+                && stats.IsInRun && _session.IsRunActive && _hasSeenLobbySinceAttach && !_currentRunCompleted)
+            {
+                OnAllWeaponRunTimerStarted(stats.WeaponAssetName);
+            }
 
             var outgoingDepthWasBossRoom = _currentDepthBossDisplayName is not null;
             var outgoingDepthEliteName = _currentDepthEliteName;
@@ -1390,10 +2044,12 @@ public sealed class TimerEngine : INotifyPropertyChanged, IDisposable
             _wasRoyalAbyssContentLastTick = outgoingDepthIsRoyalAbyssContent;
             _wasTorakaContentLastTick = outgoingDepthIsTorakaContent;
 
-            if (!_hasSeenLobbyThisSession && stats.CurrentLevelIds.Any(id => id.Equals("Lobby", StringComparison.OrdinalIgnoreCase)))
-                _hasSeenLobbyThisSession = true;
+            if (!_hasSeenLobbySinceAttach && stats.CurrentLevelIds.Any(id => id.Equals("Lobby", StringComparison.OrdinalIgnoreCase)))
+                _hasSeenLobbySinceAttach = true;
 
-            if (_hasSeenLobbyThisSession)
+            UpdateJoinedMidRun(stats);
+
+            if (_hasSeenLobbySinceAttach)
                 _session.Update(stats.IsInRun, stats.RunSuccessful, stats.LevelReached, stats.RoomReached, _loadAndCutsceneFreeTimer.AdjustedRunTime, currentBiomeName);
 
             var uiIsInRun = stats.IsInRun;
@@ -1403,18 +2059,22 @@ public sealed class TimerEngine : INotifyPropertyChanged, IDisposable
             var uiRawRunTimeText = FormatTimer(stats.RunTime);
             var uiLoadFreeTimeText = FormatTimer(_adjustedTimer.AdjustedRunTime);
             var uiLoadCutsceneFreeTimeText = FormatTimer(_loadAndCutsceneFreeTimer.AdjustedRunTime);
-            var uiCurrentBiomeName = _hasSeenLobbyThisSession ? currentBiomeName : "-";
+            var uiCurrentBiomeName = _hasSeenLobbySinceAttach ? currentBiomeName : "-";
 
             restOfTickMs = restOfTickStopwatch.Elapsed.TotalMilliseconds;
 
             List<BiomeGroupViewModel>? uiSplitGroups = null;
-            if (DateTime.UtcNow - _lastSplitsRebuildTime >= SplitsRebuildInterval)
+            if (DateTime.UtcNow - _lastSplitsRebuildTime >= SplitsRebuildInterval || _forceSplitsRebuild)
             {
+                _forceSplitsRebuild = false;
                 _lastSplitsRebuildTime = DateTime.UtcNow;
                 var rebuildSplitsStopwatch = Stopwatch.StartNew();
                 uiSplitGroups = BuildSplitGroups(stats, currentBiomeName, _currentDepthBossDisplayName is not null, _currentDepthEliteName, _currentDepthIsRoyalAbyssContent, _currentDepthIsTorakaContent);
                 rebuildSplitsMs = rebuildSplitsStopwatch.Elapsed.TotalMilliseconds;
             }
+
+            var isAllWeaponView = IsAllWeaponView;
+            var uiAllWeapon = isAllWeaponView ? BuildAllWeaponDisplay(uiSplitGroups) : default;
 
             _uiDispatcher.BeginInvoke(() =>
             {
@@ -1427,6 +2087,27 @@ public sealed class TimerEngine : INotifyPropertyChanged, IDisposable
                 LoadCutsceneFreeTimeText = uiLoadCutsceneFreeTimeText;
                 CurrentBiomeName = uiCurrentBiomeName;
                 OnPropertyChanged(nameof(PrimaryTimeText));
+                if (isAllWeaponView)
+                {
+                    AllWeaponTotalText = uiAllWeapon.Total;
+                    AllWeaponBetweenRunsText = uiAllWeapon.BetweenRuns;
+                    AllWeaponProgressText = uiAllWeapon.Progress;
+                    AllWeaponCurrentWeaponName = uiAllWeapon.CurrentWeapon;
+                }
+                if (uiSplitGroups is not null)
+                {
+                    var weaponGroups = uiAllWeapon.Groups ?? new List<WeaponGroupViewModel>();
+                    for (var i = 0; i < weaponGroups.Count; i++)
+                    {
+                        if (i >= WeaponGroups.Count)
+                            WeaponGroups.Add(weaponGroups[i]);
+                        else if (!Equals(WeaponGroups[i], weaponGroups[i]))
+                            WeaponGroups[i] = weaponGroups[i];
+                    }
+                    while (WeaponGroups.Count > weaponGroups.Count)
+                        WeaponGroups.RemoveAt(WeaponGroups.Count - 1);
+                }
+
                 OnPropertyChanged(nameof(OverlayDisplayPrimaryTimeText));
                 OnPropertyChanged(nameof(OverlayDisplayBiomeName));
 
@@ -1483,7 +2164,7 @@ public sealed class TimerEngine : INotifyPropertyChanged, IDisposable
         foreach (var (floorSplit, isNewBest, isBossRoom, eliteName, isRoyalAbyssContent, isTorakaContent, roomHeraldNames) in _annotatedFloorSplits)
             entries.Add(new DepthEntryData(floorSplit.FloorNumber, floorSplit.BiomeName, isBossRoom, floorSplit.SegmentTime, isNewBest, floorSplit.Rooms, null, 0f, eliteName, isRoyalAbyssContent, isTorakaContent, roomHeraldNames, null));
 
-        if (_session.IsRunActive && _hasSeenLobbyThisSession)
+        if (_session.IsRunActive && _hasSeenLobbySinceAttach)
         {
             var floorInProgress = _loadAndCutsceneFreeTimer.AdjustedRunTime - _session.LastFloorSplitTime;
             var roomInProgress = _loadAndCutsceneFreeTimer.AdjustedRunTime - _session.LastRoomSplitTime;
@@ -1510,7 +2191,7 @@ public sealed class TimerEngine : INotifyPropertyChanged, IDisposable
         foreach (var group in groups)
             result.Add(BuildBiomeGroup(group));
 
-        if (_session.IsRunActive && _hasSeenLobbyThisSession && result.Count > 0)
+        if (_session.IsRunActive && _hasSeenLobbySinceAttach && result.Count > 0)
             result[^1] = result[^1] with { ShowDepthsInOverlay = true };
 
         return result;
@@ -1687,10 +2368,18 @@ public sealed class TimerEngine : INotifyPropertyChanged, IDisposable
         return new string(buffer[..count]);
     }
 
-    private static string FormatTimer(float totalSeconds)
+    internal static string FormatTimer(float totalSeconds)
     {
         if (totalSeconds < 0)
             totalSeconds = 0;
+
+        if (totalSeconds >= 3600)
+        {
+            var hours = (int)(totalSeconds / 3600);
+            var remainder = totalSeconds - hours * 3600;
+            var wholeMinutes = (int)(remainder / 60);
+            return $"{hours}:{wholeMinutes:00}:{remainder - wholeMinutes * 60:00.00}";
+        }
 
         var minutes = (int)(totalSeconds / 60);
         var seconds = totalSeconds - minutes * 60;

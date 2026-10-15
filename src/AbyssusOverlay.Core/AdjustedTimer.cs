@@ -6,7 +6,14 @@ public sealed class AdjustedTimer
     private bool _wasLoading;
     private bool _wasInRun;
     private bool _hasStarted;
-    private DateTime _lastUpdateUtc = DateTime.UtcNow;
+    private readonly Func<DateTime> _utcNow;
+    private DateTime _lastUpdateUtc;
+
+    public AdjustedTimer(Func<DateTime>? utcNow = null)
+    {
+        _utcNow = utcNow ?? (() => DateTime.UtcNow);
+        _lastUpdateUtc = _utcNow();
+    }
 
     public float AdjustedRunTime { get; private set; }
 
@@ -16,7 +23,7 @@ public sealed class AdjustedTimer
 
     public void Update(float rawRunTime, bool isInRun, bool isLoadingForStartGate, bool excludeFromTimer, bool countThroughStalledClock = false)
     {
-        var nowUtc = DateTime.UtcNow;
+        var nowUtc = _utcNow();
         var wallClockDelta = (float)(nowUtc - _lastUpdateUtc).TotalSeconds;
         _lastUpdateUtc = nowUtc;
 
@@ -58,7 +65,7 @@ public sealed class AdjustedTimer
         _wasLoading = false;
         _wasInRun = false;
         _hasStarted = false;
-        _lastUpdateUtc = DateTime.UtcNow;
+        _lastUpdateUtc = _utcNow();
         AdjustedRunTime = 0f;
     }
 }

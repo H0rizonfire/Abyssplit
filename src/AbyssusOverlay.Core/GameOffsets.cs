@@ -26,6 +26,9 @@ public static class GameOffsets
 
     public const int PlayerState_RunSuccessful = 0x410;
 
+    public const int PlayerState_WeaponUsed = 0x3B8;
+    public const int UObject_NamePrivate = 0x18;
+
     public const int Pawn_HealthComponent = 0x340;
     public const int HealthComponent_CurrentHealth = 0x200;
 

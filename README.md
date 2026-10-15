@@ -65,9 +65,12 @@ Every run is broken down floor-by-floor and room-by-room automatically as you pl
   the full per-floor breakdown. Auto-deletion of old attempts is optional and configurable (off by
   default).
 - **Stats tab** — per-location average/median/best/worst segment times with a consistency figure,
-  your PB's progression over time, and how far you've reached across all attempts.
-- **Categories & player count** — Any%, All Bosses, True Ending, and their Glitchless variants,
-  each crossed with Solo/Duo/Trio/Quad, all tracked as fully independent PB pools and history.
+  a chart of your recent runs and PB progression, and how far you've reached across all attempts.
+- **Categories & player count** — Any%, All Bosses, True Ending, All Weapon%, and more, each
+  crossed with Solo/Duo/Trio/Quad, all tracked as fully independent PB pools and history.
+  **All Weapon%** (and its True Ending version) is timed as one continuous attempt across all
+  nine weapons, with a row per weapon and the time between runs; **All Bosses** shows which biome
+  bosses you still need before the Royal Abyss. See the [User Guide](USER_GUIDE.md#category-features).
 
 ### Sharing splits
 

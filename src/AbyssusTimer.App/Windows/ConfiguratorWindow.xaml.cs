@@ -284,6 +284,21 @@ public partial class ConfiguratorWindow : Window
             _engine.OverlayBackgroundImagePath = dialog.FileName;
     }
 
+    private void BrowsePbSound_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new Microsoft.Win32.OpenFileDialog
+        {
+            Title = "Choose a New-PB Sound",
+            Filter = PbSound.FileFilter,
+        };
+        if (dialog.ShowDialog(this) == true)
+            _engine.PbSoundPath = dialog.FileName;
+    }
+
+    private void ClearPbSound_Click(object sender, RoutedEventArgs e) => _engine.PbSoundPath = null;
+
+    private void TestPbSound_Click(object sender, RoutedEventArgs e) => _engine.TestPbSound();
+
     private void ClearBackgroundImage_Click(object sender, RoutedEventArgs e) =>
         _engine.OverlayBackgroundImagePath = null;
 
@@ -310,6 +325,12 @@ public partial class ConfiguratorWindow : Window
             case nameof(TimerEngine.OverlayTitleTextColor):
                 _engine.OverlayTitleTextColor = parts[1];
                 break;
+            case nameof(TimerEngine.OverlayWeaponTextColor):
+                _engine.OverlayWeaponTextColor = parts[1];
+                break;
+            case nameof(TimerEngine.OverlayStatusTextColor):
+                _engine.OverlayStatusTextColor = parts[1];
+                break;
         }
     }
 
@@ -324,6 +345,8 @@ public partial class ConfiguratorWindow : Window
             nameof(TimerEngine.OverlayDepthTextColor) => _engine.OverlayDepthTextColor,
             nameof(TimerEngine.OverlayFloorTextColor) => _engine.OverlayFloorTextColor,
             nameof(TimerEngine.OverlayTitleTextColor) => _engine.OverlayTitleTextColor,
+            nameof(TimerEngine.OverlayWeaponTextColor) => _engine.OverlayWeaponTextColor,
+            nameof(TimerEngine.OverlayStatusTextColor) => _engine.OverlayStatusTextColor,
             _ => "#FFFFFF",
         };
 
@@ -358,6 +381,12 @@ public partial class ConfiguratorWindow : Window
                 break;
             case nameof(TimerEngine.OverlayFloorTextColor):
                 _engine.OverlayFloorTextColor = hex;
+                break;
+            case nameof(TimerEngine.OverlayWeaponTextColor):
+                _engine.OverlayWeaponTextColor = hex;
+                break;
+            case nameof(TimerEngine.OverlayStatusTextColor):
+                _engine.OverlayStatusTextColor = hex;
                 break;
             case nameof(TimerEngine.OverlayTitleTextColor):
                 _engine.OverlayTitleTextColor = hex;
@@ -449,7 +478,10 @@ public partial class ConfiguratorWindow : Window
                 $"**OS:** {Environment.OSVersion.VersionString}\n" +
                 $"**Full log file:** `{AppLog.CurrentLogFilePath}`\n" +
                 "(Already copied to your clipboard, and the file is open/selected in Explorer — " +
-                "attach it below if the excerpt doesn't have enough detail.)\n\n" +
+                "attach it below if the excerpt doesn't have enough detail.)\n" +
+                (_engine.RecordingPath is { } recordingPath
+                    ? $"**Session recording (optional):** `{recordingPath}` — attaching it lets the bug be replayed exactly. It contains only game-state readings (depth, timers, loading), nothing personal.\n\n"
+                    : "\n") +
                 "**What happened:**\n\n\n" +
                 "**Recent log excerpt:**\n```\n" + logExcerpt + "\n```";
 

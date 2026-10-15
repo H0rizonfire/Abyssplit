@@ -10,7 +10,8 @@ public readonly record struct AbyssusStats(
     bool IsInRun,
     bool RunSuccessful,
     bool IsPaused,
-    IReadOnlyList<string> CurrentLevelIds)
+    IReadOnlyList<string> CurrentLevelIds,
+    string? WeaponAssetName = null)
 {
     public static readonly AbyssusStats Empty =
         new(0, 0, 0, 0f, 0f, false, false, false, false, Array.Empty<string>());

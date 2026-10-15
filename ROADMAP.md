@@ -18,17 +18,6 @@ instead of only ever having one global settings file. Biggest design question: h
 `AppSettings` belongs to a profile versus stays global (window position, update-check
 preference, etc. probably shouldn't be per-profile).
 
-## Per-weapon PB/run tracking for All Weapon%
-
-"All Weapon%" (`RunCategory.AllWeaponPercent`) already exists as a category and already uses the
-same floor-based splits as Any% — it's not a different run structure, just a different goal: an
-Any%-equivalent completion done once per weapon in the game, one weapon per attempt. Right now
-every attempt in that category shares one PB pool regardless of which weapon was used, which
-doesn't make much sense given how differently weapons play. The improvement: detect which weapon
-a run started with and track PBs/history separately per weapon within All Weapon%, the same way
-Solo/Duo/Trio/Quad already split PBs apart by player count. Needs a memory read for the
-player's starting/equipped weapon, not a pickup-event detector.
-
 ## Per-Deepwater-level PB/run tracking
 
 Detect which Deepwater level a run is played on and track personal bests and run history

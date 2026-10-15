@@ -68,8 +68,21 @@ public sealed class AbyssusStatsReader
             }
         }
 
-        stats = new AbyssusStats(gold, level, room, runTime, health, isLoading, isInRun, runSuccessful, isPaused, levelIds);
+        var weaponAssetName = ReadWeaponAssetName(playerState, namePool);
+
+        stats = new AbyssusStats(gold, level, room, runTime, health, isLoading, isInRun, runSuccessful, isPaused, levelIds, weaponAssetName);
         return true;
+    }
+
+    private string? ReadWeaponAssetName(nint playerState, NamePool namePool)
+    {
+        if (!_process.TryReadPointer(playerState + GameOffsets.PlayerState_WeaponUsed, out var weaponAsset) || weaponAsset == 0)
+            return null;
+
+        if (!_process.TryReadFName(weaponAsset + GameOffsets.UObject_NamePrivate, out var comparisonIndex, out var number))
+            return null;
+
+        return namePool.TryResolve(comparisonIndex, number, out var name) ? name : null;
     }
 
     private string[] ReadLevelIds(nint arrayFieldAddress, NamePool namePool)

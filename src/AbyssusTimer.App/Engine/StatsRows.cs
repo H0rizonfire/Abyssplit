@@ -6,4 +6,4 @@ public sealed record PbMilestoneRow(string DateText, string TimeText, string? Im
 
 public sealed record AttemptsReachedRow(string Label, int TotalCount, int CompletedCount);
 
-public sealed record PbChartMarker(double X, double Y, string DateText, string TimeText);
+public sealed record PbChartMarker(double X, double Y, string DateText, string TimeText, bool IsPb);

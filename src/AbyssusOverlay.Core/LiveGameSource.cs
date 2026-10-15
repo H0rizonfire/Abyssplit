@@ -18,6 +18,11 @@ public sealed class LiveGameSource : IGameSource
 
     public GameStore? Store => _process.IsAttached ? _attachedBuild?.Store : null;
 
+    public string? GameVersion => _process.IsAttached ? _gameVersion : null;
+    private volatile string? _gameVersion;
+    private CancellationTokenSource? _gameVersionRead;
+    private static readonly TimeSpan GameVersionRetryInterval = TimeSpan.FromSeconds(3);
+
     public bool IsProcessAlive() => _process.IsProcessAlive();
 
     public bool TryAttach()
@@ -36,11 +41,48 @@ public sealed class LiveGameSource : IGameSource
         _heraldTracker.Start();
         _eliteTracker = new EliteTracker(namePool, objectArray);
         _eliteTracker.Start();
+        StartGameVersionRead(objectArray, namePool);
         return true;
+    }
+
+    private void StartGameVersionRead(GUObjectArrayReader objectArray, NamePool namePool)
+    {
+        StopGameVersionRead();
+        var read = new CancellationTokenSource();
+        _gameVersionRead = read;
+        var token = read.Token;
+        Task.Run(async () =>
+        {
+            try
+            {
+                while (!token.IsCancellationRequested)
+                {
+                    if (GameProjectVersion.TryRead(_process, objectArray, namePool) is { } version)
+                    {
+                        if (!token.IsCancellationRequested)
+                            _gameVersion = version;
+                        return;
+                    }
+                    await Task.Delay(GameVersionRetryInterval, token);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+            }
+        });
+    }
+
+    private void StopGameVersionRead()
+    {
+        _gameVersionRead?.Cancel();
+        _gameVersionRead?.Dispose();
+        _gameVersionRead = null;
+        _gameVersion = null;
     }
 
     public void OnDetached()
     {
+        StopGameVersionRead();
         _cutsceneTracker?.Stop();
         _heraldTracker?.Stop();
         _eliteTracker?.Stop();
@@ -65,6 +107,7 @@ public sealed class LiveGameSource : IGameSource
 
     public void Dispose()
     {
+        StopGameVersionRead();
         _cutsceneTracker?.Dispose();
         _heraldTracker?.Dispose();
         _eliteTracker?.Dispose();

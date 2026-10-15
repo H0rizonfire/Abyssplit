@@ -36,22 +36,51 @@ public sealed class GameProcess : IDisposable
             : processName;
 
         var candidates = Process.GetProcessesByName(shortName);
-        if (candidates.Length == 0)
-            return false;
+        try
+        {
+            var process = candidates.FirstOrDefault(candidate => !HasExitedSafe(candidate));
+            if (process is null)
+                return false;
 
-        using var process = candidates[0];
-        var mainModule = process.MainModule;
-        if (mainModule is null)
-            return false;
+            ProcessModule? mainModule;
+            try
+            {
+                mainModule = process.MainModule;
+            }
+            catch (Exception ex) when (ex is InvalidOperationException or System.ComponentModel.Win32Exception)
+            {
+                return false;
+            }
 
-        _processId = process.Id;
-        _handle = OpenProcess(ProcessVmRead | ProcessQueryInformation, false, _processId);
-        if (_handle == 0)
-            return false;
+            if (mainModule is null)
+                return false;
 
-        ModuleBase = mainModule.BaseAddress;
-        ExecutablePath = mainModule.FileName;
-        return true;
+            _processId = process.Id;
+            _handle = OpenProcess(ProcessVmRead | ProcessQueryInformation, false, _processId);
+            if (_handle == 0)
+                return false;
+
+            ModuleBase = mainModule.BaseAddress;
+            ExecutablePath = mainModule.FileName;
+            return true;
+        }
+        finally
+        {
+            foreach (var candidate in candidates)
+                candidate.Dispose();
+        }
+    }
+
+    private static bool HasExitedSafe(Process process)
+    {
+        try
+        {
+            return process.HasExited;
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or System.ComponentModel.Win32Exception)
+        {
+            return false;
+        }
     }
 
     public void Detach()

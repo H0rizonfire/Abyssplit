@@ -37,9 +37,15 @@ public sealed class PersonalBests
         }
     }
 
-    public bool TryRecordFloorSegment(int floorNumber, float segmentTime)
+    public bool TryRecordFloorSegment(int floorNumber, float segmentTime) =>
+        TryRecordFloorSegment(_activeCategory, floorNumber, segmentTime);
+
+    public bool TryRecordFloorSegment(string categoryKey, int floorNumber, float segmentTime)
     {
-        var category = GetActiveCategory();
+        if (!IsPossibleTime(segmentTime))
+            return false;
+
+        var category = GetCategory(categoryKey);
         if (category.BestFloorSegments.TryGetValue(floorNumber, out var existing) && existing <= segmentTime)
             return false;
 
@@ -48,9 +54,14 @@ public sealed class PersonalBests
         return true;
     }
 
-    public bool TryRecordRunTime(float runTime)
+    public bool TryRecordRunTime(float runTime) => TryRecordRunTime(_activeCategory, runTime);
+
+    public bool TryRecordRunTime(string categoryKey, float runTime)
     {
-        var category = GetActiveCategory();
+        if (!IsPossibleTime(runTime))
+            return false;
+
+        var category = GetCategory(categoryKey);
         if (category.BestRunTime is { } existing && existing <= runTime)
             return false;
 
@@ -59,18 +70,48 @@ public sealed class PersonalBests
         return true;
     }
 
+    public float? GetBestWeaponTime(string weaponAssetName) =>
+        GetActiveCategory().BestWeaponTimes.TryGetValue(weaponAssetName, out var value) ? value : null;
+
+    public bool TryRecordWeaponTime(string weaponAssetName, float runTime)
+    {
+        if (!IsPossibleTime(runTime))
+            return false;
+
+        var category = GetActiveCategory();
+        if (category.BestWeaponTimes.TryGetValue(weaponAssetName, out var existing) && existing <= runTime)
+            return false;
+
+        category.BestWeaponTimes[weaponAssetName] = runTime;
+        Save();
+        return true;
+    }
+
     public void SetBestRunTime(float? value)
     {
-        GetActiveCategory().BestRunTime = value;
+        GetActiveCategory().BestRunTime = value is { } time && IsPossibleTime(time) ? time : null;
         Save();
     }
 
-    private CategoryData GetActiveCategory()
+    public static bool IsPossibleTime(float seconds) => seconds > 0f && float.IsFinite(seconds);
+
+    public IReadOnlyCollection<string> CategoriesWithDroppedRunTime => _categoriesWithDroppedRunTime;
+    private readonly List<string> _categoriesWithDroppedRunTime = new();
+
+    public void SetBestRunTime(string categoryKey, float? value)
     {
-        if (!_categories.TryGetValue(_activeCategory, out var data))
+        GetCategory(categoryKey).BestRunTime = value is { } time && IsPossibleTime(time) ? time : null;
+        Save();
+    }
+
+    private CategoryData GetActiveCategory() => GetCategory(_activeCategory);
+
+    private CategoryData GetCategory(string categoryKey)
+    {
+        if (!_categories.TryGetValue(categoryKey, out var data))
         {
             data = new CategoryData();
-            _categories[_activeCategory] = data;
+            _categories[categoryKey] = data;
         }
         return data;
     }
@@ -85,10 +126,30 @@ public sealed class PersonalBests
             var json = File.ReadAllText(_filePath);
             var data = JsonSerializer.Deserialize<PersonalBestsData>(json);
             _categories = data?.Categories ?? new Dictionary<string, CategoryData>();
+            DropImpossibleValues();
         }
         catch (Exception ex) when (ex is IOException or JsonException or UnauthorizedAccessException)
         {
             _categories = new Dictionary<string, CategoryData>();
+        }
+    }
+
+    private void DropImpossibleValues()
+    {
+        foreach (var (key, category) in _categories)
+        {
+            if (category.BestRunTime is { } best && !IsPossibleTime(best))
+            {
+                category.BestRunTime = null;
+                _categoriesWithDroppedRunTime.Add(key);
+            }
+
+            category.BestFloorSegments ??= new();
+            category.BestWeaponTimes ??= new();
+            foreach (var floor in category.BestFloorSegments.Where(kv => !IsPossibleTime(kv.Value)).Select(kv => kv.Key).ToList())
+                category.BestFloorSegments.Remove(floor);
+            foreach (var weapon in category.BestWeaponTimes.Where(kv => !IsPossibleTime(kv.Value)).Select(kv => kv.Key).ToList())
+                category.BestWeaponTimes.Remove(weapon);
         }
     }
 
@@ -108,6 +169,8 @@ public sealed class PersonalBests
     {
         public Dictionary<int, float> BestFloorSegments { get; set; } = new();
         public float? BestRunTime { get; set; }
+
+        public Dictionary<string, float> BestWeaponTimes { get; set; } = new();
     }
 
     private sealed class PersonalBestsData

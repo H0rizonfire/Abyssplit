@@ -42,6 +42,14 @@ from **at the time you enabled it**. If you're on the portable exe and later mov
 replaced that file, the entry now points at a file that's no longer there — turn the setting off
 and back on from the new location.
 
+## The timer didn't start, or didn't stop at the end of the run
+
+Abyssplit times a run from the moment you start it in the lobby. If it was opened — or the game
+was started or restarted — while a run was already in progress, that run can't be timed: only the
+**IGT** card moves, and it doesn't stop at the final kill. Abyssplit says so with a **Joined
+mid-run** notice on the overlay and the Main tab. Your next run from the lobby is timed normally.
+If you saw this without the notice, please use **Report a Bug** (Settings tab).
+
 ## Splits or times look wrong
 
 Abyssplit reads Abyssus's internal state directly, keyed to specific values that can shift when
@@ -51,10 +59,16 @@ when in the run it happened, that's usually enough to track down.
 
 ## Where is my data stored?
 
-Everything Abyssplit saves — settings, personal bests, run history, and daily logs — lives under
-`%APPDATA%\AbyssusTimer\`. Nothing is sent anywhere automatically; the only network-adjacent
-actions are ones you trigger yourself (checking for updates, opening a pre-filled GitHub issue,
-sharing an exported split file).
+Everything Abyssplit saves — settings, personal bests, run history, daily logs, and session
+recordings — lives under `%APPDATA%\AbyssusTimer\`. Nothing is sent anywhere automatically; the
+only network-adjacent actions are ones you trigger yourself (checking for updates, opening a
+pre-filled GitHub issue, sharing an exported split file).
+
+**Session recordings** (`recordings\` folder) capture what Abyssplit read from the game during each
+session — depth, room, timers, loading and cutscene state — so a reported bug can be replayed
+exactly. They contain no personal information, stay on your PC unless you choose to attach one to
+a bug report, and clean themselves up: recordings older than 14 days are deleted, and the folder
+is kept under 200 MB.
 
 ## Still stuck?
 

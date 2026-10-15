@@ -7,6 +7,9 @@ internal static class StartupRegistration
 
     public static void SetEnabled(bool enabled)
     {
+        if (AppPaths.IsShadow)
+            return;
+
         using var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(RunKeyPath, writable: true);
         if (key is null)
             return;

@@ -235,6 +235,12 @@
     <ol>
       <li><a href="#getting-started">Getting started</a></li>
       <li><a href="#main-tab">The Main tab</a></li>
+      <li><a href="#category-features">Category features</a>
+        <ol>
+          <li><a href="#all-bosses">All Bosses</a></li>
+          <li><a href="#all-weapon">All Weapon%</a></li>
+        </ol>
+      </li>
       <li><a href="#history-tab">The History tab</a></li>
       <li><a href="#stats-tab">The Stats tab</a></li>
       <li><a href="#settings-tab">The Settings tab</a>
@@ -243,6 +249,7 @@
           <li><a href="#display">Display</a></li>
           <li><a href="#history-storage">History Storage</a></li>
           <li><a href="#personal-best">Personal Best</a></li>
+          <li><a href="#all-weapon-settings">All Weapon%</a></li>
           <li><a href="#split-comparison">Split Comparison</a></li>
           <li><a href="#support">Support</a></li>
         </ol>
@@ -269,7 +276,8 @@
           shown by the <strong>Attached</strong> badge next to the category picker. The overlay appears on top of the
           game once attached; the Configurator window is where you manage history, stats, and
           settings. Both the Steam and PC Game Pass versions of Abyssus are supported — Abyssplit detects
-          which one is running on its own.</p>
+          which one is running on its own. Until the game is running, the Main tab says Abyssplit is
+          waiting for Abyssus.</p>
         </div>
         <figure class="shot">
           <div class="frame"><img src="screenshots/overlay-preview.png" width="230" height="241" alt="Abyssplit overlay showing a live split for Sunken Gardens, with per-depth times and deltas"></div>
@@ -307,49 +315,97 @@
       comparison source you've picked on the Settings tab.</p>
       <p><strong>Below the splits list</strong>: your best full-run time, Sum of Best (the theoretical fastest run if
       every floor's best segment happened in the same attempt), and your previous run's time.</p>
-      <p><strong>Category / player count</strong> (top right) — switch between Any%, All Bosses, True Ending, and their
-      Glitchless variants, each crossed with Solo/Duo/Trio/Quad. Every category+player-count combination
-      keeps its own independent personal bests and history. Locked while a run is in progress.</p>
+      <p><strong>Category / player count</strong> (top right) — switch between Any%, All Bosses, True Ending, All
+      Weapon%, and the other categories, each crossed with Solo/Duo/Trio/Quad. Every
+      category+player-count combination keeps its own independent personal bests and history. Locked
+      while a run is in progress (and in All Weapon%, until the attempt ends). All Bosses and All Weapon%
+      add a few things of their own — see <a href="#category-features">Category features</a> below.</p>
       <p><strong>Reset Run</strong> — manually resets the timers and split list. Also locked mid-run.</p>
     </section>
 
-    <section class="doc-section" id="history-tab">
+    <section class="doc-section" id="category-features">
       <div class="kicker">03</div>
+      <h2>Category features</h2>
+
+      <h3 id="all-bosses">All Bosses</h3>
+      <p>The rules require every boss in every zone, which means both Zone 1 variants (Abandoned Temple and
+      Submarine), so at least two loops. To help you know when you're ready for the Royal Abyss, the
+      overlay (under the timer) and the Main tab show how many of the four biome bosses you've defeated
+      this run — <strong>The Golemancer</strong>, <strong>Captain Gwaelod</strong>, <strong>General Kri'su</strong> and <strong>Highpriest Un'glu</strong> —
+      and which are still needed. Once all four are down it turns green: <em>"All 4 biome bosses down — Royal
+      Abyss next."</em></p>
+      <p>A boss counts once you leave its depth through the portal, so the line updates a few seconds after
+      the kill. Mini bosses and the Royal Heralds aren't tracked — it's a reminder, not a rules check.</p>
+
+      <h3 id="all-weapon">All Weapon%</h3>
+      <p>A successful run with each of the nine weapons, in any order, as <strong>one continuous attempt</strong>.
+      Abyssplit detects the weapon you're using, so there's nothing to set up beyond picking the category.</p>
+      <ul>
+        <li><span><strong>The attempt</strong> starts when your first weapon run's timer starts, and finishes at the kill that
+        completes your ninth different weapon. A death, quitting a run, Reset Run, or closing the game
+        ends it.</span></li>
+        <li><span><strong>Each weapon's time</strong> is that run's own time, measured exactly like any other run (loads and
+        cutscenes removed).</span></li>
+        <li><span><strong>Between runs</strong> — everything after a kill until the next run's timer starts (the ending
+        sequence, walking back, the lobby) counts toward the attempt, with only loading screens removed.</span></li>
+        <li><span><strong>Repeating a weapon</strong> doesn't end the attempt: its time counts, but it doesn't count toward the
+        nine. It's marked <em>repeat</em>.</span></li>
+        <li><span><strong>All Weapon% True Ending</strong> is its own category, with its own personal best and history: the same,
+        except every weapon run must get the True Ending. A run that ends with the normal ending still
+        counts its time but not toward the nine, and is marked <em>normal ending, not counted</em>.</span></li>
+      </ul>
+      <p>On the overlay the split list rolls up by weapon instead of by biome: one row per weapon with its
+      time, that run's usual biome / depth / room splits underneath (following your Split Display
+      settings — with <strong>Collapse</strong>, only the weapon you're playing stays expanded), then the <strong>Between
+      runs</strong> time. The big timer shows the attempt's running total, with how many of the nine weapons
+      you've done beneath it. The Main tab shows the same, always fully expanded.</p>
+      <p>History keeps <strong>one entry per attempt</strong> — its Details list each weapon run and the time between
+      runs. Your personal best is your fastest completed attempt, and Abyssplit also keeps your best time
+      with each weapon. The category stays locked until the attempt ends. All Weapon% times recorded by
+      older versions of Abyssplit were single runs; they're kept separately and don't mix with attempts.</p>
+      <p>Two settings for this category are on the Settings tab, under <a href="#all-weapon-settings">All Weapon%</a>.</p>
+    </section>
+
+    <section class="doc-section" id="history-tab">
+      <div class="kicker">04</div>
       <h2>The History tab</h2>
-      <p>Every attempt you've made (finished or not) with its final time. Select one to see its full
-      per-floor <strong>Details</strong> breakdown. Four actions per attempt:</p>
+      <p>Every attempt you've made (finished or not) with its final time. Select one to see its
+      <strong>Details</strong>: every time recorded (Load+Cutscene-Free, Load-Free and IGT), the weapon, the game's
+      version and store build, and the full per-floor breakdown. Four actions per attempt:</p>
       <ul>
         <li><span><strong>Compare</strong> — sets it as your Specific Run comparison source (Settings tab).</span></li>
-        <li><span><strong>Share</strong> — exports it as an <code>.abysplit</code> file (IGT, Load-Free, and Load+Cutscene-Free times and
+        <li><span><strong>Share</strong> — exports it as an <code>.abysplit</code> file (every time, the weapon, the game version and the
         full per-floor splits included) after asking for a runner name, so you can send it to someone
         else to race, or submit it for record verification.</span></li>
-        <li><span><strong>Copy</strong> — copies a quick plain-text summary to the clipboard instead — lighter than Share's
-        full file, for pasting a result straight into Discord or chat.</span></li>
+        <li><span><strong>Copy</strong> — copies the same details as plain text to the clipboard instead — lighter than Share's
+        full file, for pasting a result straight into Discord, chat, or a run submission.</span></li>
         <li><span><strong>Delete</strong> — removes it from history permanently.</span></li>
       </ul>
       <p>If Abyssplit or the game crashes mid-run, the attempt isn't lost — it gets recorded as
       <strong>Incomplete</strong> the next time you launch, using whichever floors it had already completed
       (anything from the floor you were still on when it crashed isn't recoverable, same as any
-      checkpoint-based recovery).</p>
+      checkpoint-based recovery). This covers single runs; an All Weapon% attempt in progress when
+      Abyssplit itself crashes isn't recovered.</p>
     </section>
 
     <section class="doc-section" id="stats-tab">
-      <div class="kicker">04</div>
+      <div class="kicker">05</div>
       <h2>The Stats tab</h2>
       <ul>
         <li><span><strong>Per-Location Stats</strong> — average/median/best/worst segment time for every floor and boss you've
         reached, plus a consistency (standard deviation) figure.</span></li>
-        <li><span><strong>PB Progression</strong> — a small chart plus a list of every point your best full-run time improved.
-        The chart needs at least two personal bests to draw a line — your first completed run, plus a later one that beats it. Scale labels on the left show the
-        slowest and fastest times on the line, and each PB is marked with a dot — hover one to see its
-        date and time without cross-referencing the list below.</span></li>
+        <li><span><strong>PB Progression</strong> — a chart of your most recent completed runs, plus a list of every point your
+        best full-run time improved. Choose how many runs the chart shows (10, 25, 50 or 100) with
+        <strong>Runs shown</strong>. Runs that set a new personal best are green dots, the rest are dimmer; hover any
+        dot to see its date and time. The chart appears once you have two completed runs. Scale labels on
+        the left show the slowest and fastest times plotted.</span></li>
         <li><span><strong>Attempts Reached</strong> — how far you got, across every attempt.</span></li>
       </ul>
       <p>All three are scoped to whichever category and player count is currently active.</p>
     </section>
 
     <section class="doc-section" id="settings-tab">
-      <div class="kicker">05</div>
+      <div class="kicker">06</div>
       <h2>The Settings tab</h2>
 
       <h3 id="session-behavior">Session Behavior</h3>
@@ -359,7 +415,9 @@
           <tbody>
             <tr><td><strong>Pause Stops Time</strong></td><td>Off by default — pausing the game doesn't freeze the adjusted timers. Turning it on will make times ineligible for leaderboard submission unless the ruleset you're running under explicitly allows pausing.</td></tr>
             <tr><td><strong>Auto-Reset on Lobby Return</strong></td><td>On by default — timers reset the moment you're back in the lobby, ready for the next attempt.</td></tr>
-            <tr><td><strong>Play Sound on New PB</strong></td><td>On by default — a short sound plays when you beat your full-run personal best (not per-floor bests, which fire too often for a sound to make sense). Turn off if you'd rather it stay silent. Custom sound files are planned for a future update.</td></tr>
+            <tr><td><strong>Play Sound on New PB</strong></td><td>On by default — a short sound plays when you beat your full-run personal best (not per-floor bests, which fire too often for a sound to make sense). Turn off if you'd rather it stay silent.</td></tr>
+            <tr><td><strong>PB Sound</strong></td><td>The sound that plays: the Windows default, or your own file — <strong>Browse...</strong> to pick one (WAV, MP3, WMA, M4A, or AAC), <strong>Test</strong> to hear it, <strong>Clear</strong> to go back to the default. If the file is moved or won't play, the default sound plays instead.</td></tr>
+            <tr><td><strong>PB Sound Volume</strong></td><td>How loud the PB sound plays — 50% by default. Applies to your own file and the Windows default alike.</td></tr>
             <tr><td><strong>Software Rendering</strong></td><td>On by default — avoids overlay stutter/freezes when the game and overlay are competing for GPU time. Turn off only if your bottleneck is CPU instead. Requires an app restart.</td></tr>
             <tr><td><strong>Run at Startup</strong></td><td>Off by default — launches Abyssplit, minimized to the tray, when you sign in to Windows. Works the same whether you're running the installed copy or the portable exe — it points at wherever the app is running from <em>right now</em>. If you're on the portable exe, moving, renaming, or deleting that file afterward (e.g. replacing it with a newer download) will silently break this until you re-enable it from the new location.</td></tr>
             <tr><td><strong>Always Show Overlay</strong></td><td>Off by default — the overlay only appears while attached to the game, or while the Configurator window is open. Minimizing to the tray hides it too, unless you're attached. Turn this on to keep the overlay visible all the time regardless.</td></tr>
@@ -387,7 +445,20 @@
 
       <h3 id="personal-best">Personal Best</h3>
       <p><strong>Delete Recorded PB</strong> — only shown if you have one. A safety net: if a bug ever records an
-      impossible time, delete it here to revert to your next-fastest completed run.</p>
+      impossible time, delete it here to revert to your next-fastest completed run. (A personal best or
+      split of 0:00 or less is removed automatically when Abyssplit starts, and your personal best is
+      restored from your fastest completed run.)</p>
+
+      <h3 id="all-weapon-settings">All Weapon%</h3>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Setting</th><th>What it does</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Show All 9 Weapons as a Checklist</strong></td><td>Off by default — lists every weapon from the start, dimmed until you've completed a run with it, so you can see at a glance which are left. Off: weapons appear in the order you play them.</td></tr>
+            <tr><td><strong>Also Count Weapon Runs on Their Own</strong></td><td>Off by default — when on, each weapon run is also saved on its own (personal best, gold splits, history): as an ordinary Any% run in All Weapon%, or a True Ending run in All Weapon% True Ending, as if you'd run it in that category. A run that doesn't count for All Weapon% True Ending (the normal ending) isn't saved as a True Ending run. Takes effect from the next run.</td></tr>
+          </tbody>
+        </table>
+      </div>
 
       <h3 id="split-comparison">Split Comparison</h3>
       <div class="table-scroll">
@@ -407,19 +478,22 @@
       couldn't complete) rather than staying silent unless something's actually available.</p>
       <p><strong>Report a Bug</strong> opens a pre-filled GitHub issue with your app version, which version of the
       game you're running (Steam or Game Pass), and a recent log excerpt attached, and reveals
-      today's full log file in case more detail is needed. <strong>About</strong> shows the app version and a link to
-      the project repository.</p>
+      today's full log file in case more detail is needed. The issue also names this session's
+      recording file — attaching it is optional, but lets the problem be replayed exactly (recordings hold
+      only game-state readings; see <a href="https://github.com/H0rizonfire/Abyssplit/blob/main/TROUBLESHOOTING.md#where-is-my-data-stored">Troubleshooting</a>).
+      <strong>About</strong> shows the app version and a link to the project repository.</p>
     </section>
 
     <section class="doc-section" id="overlay-tab">
-      <div class="kicker">06</div>
+      <div class="kicker">07</div>
       <h2>The Overlay tab</h2>
       <p><strong>Edit Overlay Layout</strong> — toggle on to drag the overlay into position in-game; toggle off to
       return it to click-through (mouse input passes straight to the game). If you last positioned the
       overlay on a second monitor that isn't connected the next time you launch, it automatically resets
       to a default position instead of opening somewhere unreachable.</p>
       <p><strong>Preview</strong> — shows sample split data on the overlay so you can see appearance changes without
-      being in a real run. Also unlocks every setting below it.</p>
+      being in a real run — including sample weapon rows in All Weapon% and the status lines in All
+      Bosses. Also unlocks every setting below it.</p>
 
       <h3 id="overlay-appearance">Overlay Appearance</h3>
       <div class="shot-row wide-shot">
@@ -440,9 +514,13 @@
       <ul>
         <li><span><strong>Times Have a Background</strong> — off by default; draws a small highlighted pill behind every time
         value.</span></li>
-        <li><span><strong>Title / Biome / Depth / Floor</strong> — independent font size and text color for each section. Title
-        is the overlay's static "ABYSSPLIT · {biome}" header (which always ends with the running app
-        version, not customizable); Floor is the innermost per-room breakdown.</span></li>
+        <li><span><strong>Title / Biome / Depth / Floor / Weapon / Status</strong> — independent font size and text color for each
+        section. Title is the overlay's "ABYSSPLIT · {biome}" header (which always ends with the running
+        app version, not customizable; between runs it reads "Lobby"); Floor is the innermost per-room
+        breakdown. <strong>Weapon</strong> styles All Weapon%'s weapon rows and its "Between runs" row; a biome listed
+        under a weapon uses the Depth size. <strong>Status</strong> styles the lines under the timer — Prev. Run, the
+        All Bosses progress, the weapon count, and the "Joined mid-run" notice (a warning stays yellow,
+        and the All Bosses all-clear green, whatever the Status color).</span></li>
       </ul>
       <p><strong>Reset to Default</strong> reverts every appearance setting above to its shipped default in one click.</p>
 
@@ -460,7 +538,7 @@
     </section>
 
     <section class="doc-section" id="background">
-      <div class="kicker">07</div>
+      <div class="kicker">08</div>
       <h2>Running in the background</h2>
       <ul>
         <li><span><strong>Minimize to tray</strong> — minimizing the window hides it to a system tray icon instead of the

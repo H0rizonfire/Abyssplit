@@ -7,13 +7,11 @@ internal static class AppLog
 {
     private const int RetainedDays = 7;
 
-    public static string LogsDirectory { get; } = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-        "AbyssusTimer",
-        "logs");
+    public static string LogsDirectory => Path.Combine(AppPaths.DataDirectory, "logs");
 
-    public static string CurrentLogFilePath { get; } =
-        Path.Combine(LogsDirectory, $"{DateTime.Now:yyyy-MM-dd}.log");
+    private static string? _currentLogFilePath;
+    public static string CurrentLogFilePath =>
+        _currentLogFilePath ??= Path.Combine(LogsDirectory, $"{DateTime.Now:yyyy-MM-dd}.log");
 
     private static StreamWriter? _fileWriter;
 
@@ -51,7 +49,21 @@ internal static class AppLog
         try
         {
             _fileWriter?.Flush();
-            var text = File.ReadAllText(CurrentLogFilePath);
+        }
+        catch (IOException)
+        {
+        }
+
+        return ReadTail(CurrentLogFilePath, maxChars);
+    }
+
+    internal static string ReadTail(string path, int maxChars)
+    {
+        try
+        {
+            using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+            using var reader = new StreamReader(stream);
+            var text = reader.ReadToEnd();
             return text.Length <= maxChars ? text : text[^maxChars..];
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)

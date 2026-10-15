@@ -2,6 +2,7 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:engine="clr-namespace:AbyssusTimer.App.Engine"
+        xmlns:theme="clr-namespace:AbyssusTimer.App.Theme"
         Title="Abyssplit Overlay"
         WindowStyle="None"
         AllowsTransparency="True"
@@ -11,6 +12,103 @@
         ResizeMode="NoResize"
         SizeToContent="WidthAndHeight"
         WindowStartupLocation="Manual">
+    <Window.Resources>
+        <DataTemplate x:Key="BiomeGroupTemplate" DataType="{x:Type engine:BiomeGroupViewModel}">
+            <StackPanel Margin="0,3,0,0">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" Text="{Binding BiomeName}" FontWeight="Bold" Margin="0,0,10,0"
+                               Foreground="{Binding DataContext.OverlayBiomeTextColor, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource HexColorToBrushConverter}}">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="FontSize" Value="{Binding DataContext.OverlayBiomeFontSize, RelativeSource={RelativeSource AncestorType=Window}}" />
+                                <Setter Property="theme:UiRole.Name" Value="GroupLabel" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding Tag, RelativeSource={RelativeSource AncestorType=ItemsControl}}" Value="Nested">
+                                        <Setter Property="FontSize" Value="{Binding DataContext.OverlayDepthFontSize, RelativeSource={RelativeSource AncestorType=Window}}" />
+                                        <Setter Property="theme:UiRole.Name" Value="NestedGroupLabel" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                    <Border Grid.Column="1" CornerRadius="3" Padding="4,0"
+                            Background="{Binding DataContext.OverlayTimesHaveBackground, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource TimeBackgroundBrushConverter}}">
+                        <TextBlock Text="{Binding TotalTimeText}" FontFamily="Consolas" FontWeight="Bold"
+                                   Foreground="{Binding DataContext.OverlayBiomeTextColor, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource HexColorToBrushConverter}}">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="FontSize" Value="{Binding DataContext.OverlayBiomeFontSize, RelativeSource={RelativeSource AncestorType=Window}}" />
+                                    <Setter Property="theme:UiRole.Name" Value="GroupTime" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Tag, RelativeSource={RelativeSource AncestorType=ItemsControl}}" Value="Nested">
+                                            <Setter Property="FontSize" Value="{Binding DataContext.OverlayDepthFontSize, RelativeSource={RelativeSource AncestorType=Window}}" />
+                                            <Setter Property="theme:UiRole.Name" Value="NestedGroupTime" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </Border>
+                </Grid>
+                <ItemsControl Margin="8,0,0,0" ItemsSource="{Binding Depths}"
+                              Visibility="{Binding ShowDepthsInOverlay, Converter={StaticResource BoolToVisibilityConverter}}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate DataType="{x:Type engine:DepthRowViewModel}">
+                            <StackPanel Margin="0,1">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Grid.Column="0" Text="{Binding Label}" Margin="0,0,10,0" theme:UiRole.Name="DepthLabel"
+                                               FontSize="{Binding DataContext.OverlayDepthFontSize, RelativeSource={RelativeSource AncestorType=Window}}"
+                                               Foreground="{Binding DataContext.OverlayDepthTextColor, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource HexColorToBrushConverter}}" />
+                                    <TextBlock Grid.Column="1" Text="{Binding DeltaText}" theme:UiRole.Name="DepthDelta"
+                                               Foreground="{Binding DeltaSeverity, Converter={StaticResource DeltaSeverityToBrushConverter}}"
+                                               FontFamily="Consolas"
+                                               FontSize="{Binding DataContext.OverlayDepthFontSize, RelativeSource={RelativeSource AncestorType=Window}}"
+                                               Margin="0,0,6,0"
+                                               Visibility="{Binding DeltaText, Converter={StaticResource NullToVisibilityConverter}, FallbackValue=Collapsed}" />
+                                    <Border Grid.Column="2" CornerRadius="3" Padding="4,0"
+                                            Background="{Binding DataContext.OverlayTimesHaveBackground, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource TimeBackgroundBrushConverter}}">
+                                        <TextBlock Text="{Binding TimeText}" Foreground="{StaticResource TextPrimaryBrush}" FontFamily="Consolas" theme:UiRole.Name="DepthTime"
+                                                   FontSize="{Binding DataContext.OverlayDepthFontSize, RelativeSource={RelativeSource AncestorType=Window}}" />
+                                    </Border>
+                                </Grid>
+                                <ItemsControl Margin="10,0,0,0" ItemsSource="{Binding Rooms}"
+                                              Visibility="{Binding ShowRoomsInOverlay, Converter={StaticResource BoolToVisibilityConverter}}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate DataType="{x:Type engine:RoomRowViewModel}">
+                                            <Grid Margin="0,1">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Grid.Column="0" Text="{Binding Label}" Margin="0,0,10,0" theme:UiRole.Name="RoomLabel"
+                                                           FontSize="{Binding DataContext.OverlayFloorFontSize, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                           Foreground="{Binding DataContext.OverlayFloorTextColor, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource HexColorToBrushConverter}}" />
+                                                <Border Grid.Column="1" CornerRadius="3" Padding="4,0"
+                                                        Background="{Binding DataContext.OverlayTimesHaveBackground, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource TimeBackgroundBrushConverter}}">
+                                                    <TextBlock Text="{Binding TimeText}" FontFamily="Consolas" theme:UiRole.Name="RoomTime"
+                                                               FontSize="{Binding DataContext.OverlayFloorFontSize, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                               Foreground="{Binding DataContext.OverlayFloorTextColor, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource HexColorToBrushConverter}}" />
+                                                </Border>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </DataTemplate>
+    </Window.Resources>
     <Border x:Name="RootBorder"
             Background="#E60A1210"
             BorderBrush="{StaticResource HairlineBrush}"
@@ -20,112 +118,119 @@
             MinWidth="230"
             MouseLeftButtonDown="RootBorder_MouseLeftButtonDown">
         <StackPanel>
-            <TextBlock FontSize="{Binding OverlayTitleFontSize}" FontWeight="Bold"
+            <TextBlock FontSize="{Binding OverlayTitleFontSize}" theme:UiRole.Name="Title" FontWeight="Bold"
                        Foreground="{Binding OverlayTitleTextColor, Converter={StaticResource HexColorToBrushConverter}}">
                 <Run Text="ABYSSPLIT · " />
                 <Run Text="{Binding OverlayDisplayBiomeName, Mode=OneWay}" />
                 <Run Text=" · " Foreground="{StaticResource TextDimBrush}" FontSize="9" FontWeight="Normal" />
                 <Run Text="{Binding AppVersionText, Mode=OneTime}" Foreground="{StaticResource TextDimBrush}" FontSize="9" FontWeight="Normal" BaselineAlignment="Center" />
             </TextBlock>
-            <Border BorderBrush="{StaticResource HairlineBrush}" BorderThickness="0,0,0,1" Margin="0,8,0,8" />
+            <Border x:Name="HeaderRule" BorderBrush="{StaticResource HairlineBrush}" BorderThickness="0,0,0,1" Margin="0,8,0,8" />
 
             <ScrollViewer x:Name="SplitsScrollViewer" VerticalScrollBarVisibility="Hidden"
                           MaxHeight="{Binding SplitListOverflowBehavior, Converter={StaticResource SplitListOverflowBehaviorToMaxHeightConverter}}"
-                          Visibility="{Binding SplitDetailLevel, Converter={StaticResource SplitDetailLevelToVisibilityConverter}}"
+                          Visibility="{Binding OverlaySplitsVisible, Converter={StaticResource BoolToVisibilityConverter}}"
                           Margin="0,0,0,6">
-                <ItemsControl ItemsSource="{Binding OverlayDisplaySplitGroups}">
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate DataType="{x:Type engine:BiomeGroupViewModel}">
-                            <StackPanel Margin="0,3,0,0">
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="Auto" />
-                                        <ColumnDefinition Width="Auto" />
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock Grid.Column="0" Text="{Binding BiomeName}" FontWeight="Bold" Margin="0,0,10,0"
-                                               FontSize="{Binding DataContext.OverlayBiomeFontSize, RelativeSource={RelativeSource AncestorType=Window}}"
-                                               Foreground="{Binding DataContext.OverlayBiomeTextColor, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource HexColorToBrushConverter}}" />
-                                    <Border Grid.Column="1" CornerRadius="3" Padding="4,0"
-                                            Background="{Binding DataContext.OverlayTimesHaveBackground, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource TimeBackgroundBrushConverter}}">
-                                        <TextBlock Text="{Binding TotalTimeText}" FontFamily="Consolas" FontWeight="Bold"
-                                                   FontSize="{Binding DataContext.OverlayBiomeFontSize, RelativeSource={RelativeSource AncestorType=Window}}"
-                                                   Foreground="{Binding DataContext.OverlayBiomeTextColor, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource HexColorToBrushConverter}}" />
-                                    </Border>
-                                </Grid>
-                                <ItemsControl Margin="8,0,0,0" ItemsSource="{Binding Depths}"
-                                              Visibility="{Binding ShowDepthsInOverlay, Converter={StaticResource BoolToVisibilityConverter}}">
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate DataType="{x:Type engine:DepthRowViewModel}">
-                                            <StackPanel Margin="0,1">
-                                                <Grid>
-                                                    <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="Auto" />
-                                                        <ColumnDefinition Width="Auto" />
-                                                        <ColumnDefinition Width="Auto" />
-                                                    </Grid.ColumnDefinitions>
-                                                    <TextBlock Grid.Column="0" Text="{Binding Label}" Margin="0,0,10,0"
-                                                               FontSize="{Binding DataContext.OverlayDepthFontSize, RelativeSource={RelativeSource AncestorType=Window}}"
-                                                               Foreground="{Binding DataContext.OverlayDepthTextColor, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource HexColorToBrushConverter}}" />
-                                                    <TextBlock Grid.Column="1" Text="{Binding DeltaText}"
-                                                               Foreground="{Binding DeltaSeverity, Converter={StaticResource DeltaSeverityToBrushConverter}}"
-                                                               FontFamily="Consolas"
-                                                               FontSize="{Binding DataContext.OverlayDepthFontSize, RelativeSource={RelativeSource AncestorType=Window}}"
-                                                               Margin="0,0,6,0"
-                                                               Visibility="{Binding DeltaText, Converter={StaticResource NullToVisibilityConverter}, FallbackValue=Collapsed}" />
-                                                    <Border Grid.Column="2" CornerRadius="3" Padding="4,0"
-                                                            Background="{Binding DataContext.OverlayTimesHaveBackground, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource TimeBackgroundBrushConverter}}">
-                                                        <TextBlock Text="{Binding TimeText}" Foreground="{StaticResource TextPrimaryBrush}" FontFamily="Consolas"
-                                                                   FontSize="{Binding DataContext.OverlayDepthFontSize, RelativeSource={RelativeSource AncestorType=Window}}" />
-                                                    </Border>
-                                                </Grid>
-                                                <ItemsControl Margin="10,0,0,0" ItemsSource="{Binding Rooms}"
-                                                              Visibility="{Binding ShowRoomsInOverlay, Converter={StaticResource BoolToVisibilityConverter}}">
-                                                    <ItemsControl.ItemTemplate>
-                                                        <DataTemplate DataType="{x:Type engine:RoomRowViewModel}">
-                                                            <Grid Margin="0,1">
-                                                                <Grid.ColumnDefinitions>
-                                                                    <ColumnDefinition Width="Auto" />
-                                                                    <ColumnDefinition Width="Auto" />
-                                                                </Grid.ColumnDefinitions>
-                                                                <TextBlock Grid.Column="0" Text="{Binding Label}" Margin="0,0,10,0"
-                                                                           FontSize="{Binding DataContext.OverlayFloorFontSize, RelativeSource={RelativeSource AncestorType=Window}}"
-                                                                           Foreground="{Binding DataContext.OverlayFloorTextColor, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource HexColorToBrushConverter}}" />
-                                                                <Border Grid.Column="1" CornerRadius="3" Padding="4,0"
-                                                                        Background="{Binding DataContext.OverlayTimesHaveBackground, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource TimeBackgroundBrushConverter}}">
-                                                                    <TextBlock Text="{Binding TimeText}" FontFamily="Consolas"
-                                                                               FontSize="{Binding DataContext.OverlayFloorFontSize, RelativeSource={RelativeSource AncestorType=Window}}"
-                                                                               Foreground="{Binding DataContext.OverlayFloorTextColor, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource HexColorToBrushConverter}}" />
-                                                                </Border>
-                                                            </Grid>
-                                                        </DataTemplate>
-                                                    </ItemsControl.ItemTemplate>
-                                                </ItemsControl>
-                                            </StackPanel>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                            </StackPanel>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
+                <StackPanel>
+                    <ItemsControl ItemsSource="{Binding OverlayDisplaySplitGroups}" ItemTemplate="{StaticResource BiomeGroupTemplate}"
+                                  Visibility="{Binding IsAllWeaponView, Converter={StaticResource InverseBoolToVisibilityConverter}}" />
+                    <ItemsControl x:Name="WeaponGroupsList" ItemsSource="{Binding OverlayDisplayWeaponGroups}"
+                                  Visibility="{Binding IsAllWeaponView, Converter={StaticResource BoolToVisibilityConverter}}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="{x:Type engine:WeaponGroupViewModel}">
+                                <StackPanel Margin="0,3,0,0" Opacity="{Binding RowOpacity}">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Grid.Column="0" Text="{Binding Name}" theme:UiRole.Name="WeaponLabel" FontWeight="Bold" Margin="0,0,6,0"
+                                                   FontSize="{Binding DataContext.OverlayWeaponFontSize, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                   Foreground="{Binding DataContext.OverlayWeaponTextColor, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource HexColorToBrushConverter}}" />
+                                        <TextBlock Grid.Column="1" Text="{Binding NoteText}" theme:UiRole.Name="WeaponNote"
+                                                   FontSize="{Binding DataContext.OverlayStatusFontSize, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                   Foreground="{Binding DataContext.OverlayStatusTextColor, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource HexColorToBrushConverter}}"
+                                                   VerticalAlignment="Center" Margin="0,0,6,0"
+                                                   Visibility="{Binding NoteText, Converter={StaticResource NullToVisibilityConverter}, FallbackValue=Collapsed}" />
+                                        <Border Grid.Column="2" CornerRadius="3" Padding="4,0"
+                                                Background="{Binding DataContext.OverlayTimesHaveBackground, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource TimeBackgroundBrushConverter}}">
+                                            <TextBlock Text="{Binding TimeText}" FontFamily="Consolas" FontWeight="Bold" theme:UiRole.Name="WeaponTime"
+                                                       FontSize="{Binding DataContext.OverlayWeaponFontSize, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                       Foreground="{Binding DataContext.OverlayWeaponTextColor, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource HexColorToBrushConverter}}" />
+                                        </Border>
+                                    </Grid>
+                                    <Border Height="1" Margin="0,1,0,0" Background="{Binding DataContext.OverlayWeaponTextColor, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource HexColorToBrushConverter}}"
+                                            Visibility="{Binding IsCurrent, Converter={StaticResource BoolToVisibilityConverter}}" />
+                                    <ItemsControl Margin="8,0,0,0" Tag="Nested" ItemsSource="{Binding BiomeGroups}" ItemTemplate="{StaticResource BiomeGroupTemplate}"
+                                                  Visibility="{Binding ShowBiomesInOverlay, Converter={StaticResource BoolToVisibilityConverter}}" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <Grid Margin="0,3,0,0" Visibility="{Binding IsAllWeaponView, Converter={StaticResource BoolToVisibilityConverter}}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="Between runs" theme:UiRole.Name="BetweenRunsLabel" FontWeight="Bold" Margin="0,0,6,0"
+                                   FontSize="{Binding OverlayWeaponFontSize}"
+                                   Foreground="{Binding OverlayWeaponTextColor, Converter={StaticResource HexColorToBrushConverter}}" />
+                        <Border Grid.Column="1" CornerRadius="3" Padding="4,0"
+                                Background="{Binding OverlayTimesHaveBackground, Converter={StaticResource TimeBackgroundBrushConverter}}">
+                            <TextBlock Text="{Binding OverlayDisplayAllWeaponBetweenRunsText}" theme:UiRole.Name="BetweenRunsTime" FontFamily="Consolas" FontWeight="Bold"
+                                       FontSize="{Binding OverlayWeaponFontSize}"
+                                       Foreground="{Binding OverlayWeaponTextColor, Converter={StaticResource HexColorToBrushConverter}}" />
+                        </Border>
+                    </Grid>
+                </StackPanel>
             </ScrollViewer>
             <Border BorderBrush="{StaticResource HairlineBrush}" BorderThickness="0,0,0,1" Margin="0,0,0,4" />
 
-            <TextBlock Text="{Binding OverlayDisplayPrimaryTimeText}"
+            <TextBlock Text="{Binding OverlayDisplayPrimaryTimeText}" theme:UiRole.Name="PrimaryTimer"
                        FontFamily="Consolas"
                        FontSize="30"
                        Foreground="{StaticResource TextPrimaryBrush}"
                        HorizontalAlignment="Center"
                        Margin="0,4,0,4" />
 
+            <StackPanel Margin="0,0,0,4" HorizontalAlignment="Center" MaxWidth="{Binding ActualWidth, ElementName=HeaderRule}"
+                        Visibility="{Binding IsJoinedMidRun, Converter={StaticResource BoolToVisibilityConverter}}">
+                <TextBlock Text="Joined mid-run — this run isn't timed" theme:UiRole.Name="MidRunNotice" Foreground="{StaticResource WarningBrush}" FontSize="{Binding OverlayStatusFontSize}"
+                           HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" />
+                <TextBlock Text="Your next run from the lobby will be." theme:UiRole.Name="MidRunHint" Foreground="{Binding OverlayStatusTextColor, Converter={StaticResource HexColorToBrushConverter}}" FontSize="{Binding OverlayStatusFontSize}"
+                           HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" />
+            </StackPanel>
+            <StackPanel Margin="0,0,0,4" HorizontalAlignment="Center" MaxWidth="{Binding ActualWidth, ElementName=HeaderRule}"
+                        Visibility="{Binding IsAllBossesView, Converter={StaticResource BoolToVisibilityConverter}}">
+                <TextBlock Text="{Binding OverlayDisplayAllBossesProgressText}" theme:UiRole.Name="BossesProgress" FontSize="{Binding OverlayStatusFontSize}"
+                           HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Foreground" Value="{Binding OverlayStatusTextColor, Converter={StaticResource HexColorToBrushConverter}}" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding OverlayDisplayAllBossesAllDefeated}" Value="True">
+                                    <Setter Property="Foreground" Value="{StaticResource ToxicBrush}" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+                <TextBlock Text="{Binding OverlayDisplayAllBossesRemainingText}" theme:UiRole.Name="BossesRemaining" Foreground="{Binding OverlayStatusTextColor, Converter={StaticResource HexColorToBrushConverter}}" FontSize="{Binding OverlayStatusFontSize}"
+                           HorizontalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap"
+                           Visibility="{Binding OverlayDisplayAllBossesRemainingText, Converter={StaticResource NullToVisibilityConverter}, FallbackValue=Collapsed}" />
+            </StackPanel>
+            <TextBlock Text="{Binding OverlayDisplayAllWeaponProgressText}" theme:UiRole.Name="WeaponProgress" Foreground="{Binding OverlayStatusTextColor, Converter={StaticResource HexColorToBrushConverter}}" FontSize="{Binding OverlayStatusFontSize}"
+                       HorizontalAlignment="Center" Margin="0,0,0,4"
+                       Visibility="{Binding IsAllWeaponView, Converter={StaticResource BoolToVisibilityConverter}}" />
             <Grid Visibility="{Binding ShowPreviousSegment, Converter={StaticResource BoolToVisibilityConverter}}">
                 <Grid Visibility="{Binding PreviousRunTimeText, Converter={StaticResource NullToVisibilityConverter}, FallbackValue=Collapsed}">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
-                    <TextBlock Grid.Column="0" Text="Prev. Run" Foreground="{StaticResource TextDimBrush}" FontSize="10" />
-                    <TextBlock Grid.Column="1" Text="{Binding PreviousRunTimeText}" Foreground="{StaticResource ToxicBrush}" FontFamily="Consolas" FontSize="10" />
+                    <TextBlock Grid.Column="0" Text="Prev. Run" theme:UiRole.Name="PrevRunLabel" Foreground="{Binding OverlayStatusTextColor, Converter={StaticResource HexColorToBrushConverter}}" FontSize="{Binding OverlayStatusFontSize}" />
+                    <TextBlock Grid.Column="1" Text="{Binding PreviousRunTimeText}" theme:UiRole.Name="PrevRunTime" Foreground="{StaticResource ToxicBrush}" FontFamily="Consolas" FontSize="{Binding OverlayStatusFontSize}" />
                 </Grid>
             </Grid>
         </StackPanel>

@@ -6,10 +6,7 @@ internal static class DebugConsole
 {
     private static StreamWriter? _fileWriter;
 
-    public static string LogFilePath { get; } = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-        "AbyssusTimer",
-        "diagnostics.log");
+    public static string LogFilePath => Path.Combine(AppPaths.DataDirectory, "diagnostics.log");
 
     public static void Attach()
     {

@@ -28,6 +28,19 @@ public sealed class RunSession
 
     public void Update(bool isInRun, bool runSuccessful, int currentFloor, int currentRoom, float loadFreeTime, string currentBiomeName)
     {
+        try
+        {
+            UpdateCore(isInRun, runSuccessful, currentFloor, currentRoom, loadFreeTime);
+        }
+        finally
+        {
+            _lastKnownBiomeName = currentBiomeName;
+            _wasInRun = isInRun;
+        }
+    }
+
+    private void UpdateCore(bool isInRun, bool runSuccessful, int currentFloor, int currentRoom, float loadFreeTime)
+    {
         if (isInRun && !_wasInRun)
         {
             _splits.Clear();
@@ -74,9 +87,6 @@ public sealed class RunSession
             _lastFloorSplitTime = loadFreeTime;
             _lastRoomSplitTime = loadFreeTime;
         }
-
-        _lastKnownBiomeName = currentBiomeName;
-        _wasInRun = isInRun;
     }
 
     public void ForceFloorSplit(float loadFreeTime, string currentBiomeName)

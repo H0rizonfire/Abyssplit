@@ -1,6 +1,7 @@
 using System.IO;
 using System.Text.Json;
 using AbyssusOverlay.Core;
+using AbyssusTimer.App.Interop;
 
 namespace AbyssusTimer.App.Settings;
 
@@ -11,24 +12,30 @@ public sealed class AppSettings
     public double OverlayLeft { get; set; } = 120;
     public double OverlayTop { get; set; } = 120;
 
-    public double OverlayOpacity { get; set; } = 0.90;
+    public double OverlayOpacity { get; set; } = OverlayAppearanceDefaults.Opacity;
 
-    public double OverlayScale { get; set; } = 1.0;
+    public double OverlayScale { get; set; } = OverlayAppearanceDefaults.Scale;
 
     public string? OverlayBackgroundImagePath { get; set; }
 
-    public double OverlayBiomeFontSize { get; set; } = 11;
-    public double OverlayDepthFontSize { get; set; } = 11;
-    public double OverlayFloorFontSize { get; set; } = 10;
+    public double OverlayBiomeFontSize { get; set; } = OverlayAppearanceDefaults.BiomeFontSize;
+    public double OverlayDepthFontSize { get; set; } = OverlayAppearanceDefaults.DepthFontSize;
+    public double OverlayFloorFontSize { get; set; } = OverlayAppearanceDefaults.FloorFontSize;
 
-    public bool OverlayTimesHaveBackground { get; set; }
+    public bool OverlayTimesHaveBackground { get; set; } = OverlayAppearanceDefaults.TimesHaveBackground;
 
-    public string OverlayBiomeTextColor { get; set; } = "#C98F3F";
-    public string OverlayDepthTextColor { get; set; } = "#8A9994";
-    public string OverlayFloorTextColor { get; set; } = "#56635E";
+    public string OverlayBiomeTextColor { get; set; } = OverlayAppearanceDefaults.BiomeTextColor;
+    public string OverlayDepthTextColor { get; set; } = OverlayAppearanceDefaults.DepthTextColor;
+    public string OverlayFloorTextColor { get; set; } = OverlayAppearanceDefaults.FloorTextColor;
 
-    public double OverlayTitleFontSize { get; set; } = 11;
-    public string OverlayTitleTextColor { get; set; } = "#C98F3F";
+    public double OverlayWeaponFontSize { get; set; } = OverlayAppearanceDefaults.WeaponFontSize;
+    public string OverlayWeaponTextColor { get; set; } = OverlayAppearanceDefaults.WeaponTextColor;
+
+    public double OverlayStatusFontSize { get; set; } = OverlayAppearanceDefaults.StatusFontSize;
+    public string OverlayStatusTextColor { get; set; } = OverlayAppearanceDefaults.StatusTextColor;
+
+    public double OverlayTitleFontSize { get; set; } = OverlayAppearanceDefaults.TitleFontSize;
+    public string OverlayTitleTextColor { get; set; } = OverlayAppearanceDefaults.TitleTextColor;
 
     public bool ShowRawTimer { get; set; } = true;
     public bool ShowLoadFreeTimer { get; set; } = true;
@@ -38,7 +45,17 @@ public sealed class AppSettings
     public bool PauseStopsTime { get; set; }
     public bool AutoResetOnLobbyReturn { get; set; } = true;
 
+    public bool CountAllWeaponRunsAsAnyPercent { get; set; }
+
+    public bool AllWeaponPreloadChecklist { get; set; }
+
+    public int PbChartRunCount { get; set; } = 25;
+
     public bool PlaySoundOnNewPb { get; set; } = true;
+
+    public string? PbSoundPath { get; set; }
+
+    public double PbSoundVolume { get; set; } = 0.5;
 
     public bool AlwaysShowOverlay { get; set; }
 
@@ -66,10 +83,7 @@ public sealed class AppSettings
 
     public string RunHistoryTrimStrategy { get; set; } = nameof(Engine.RunHistoryTrimStrategy.Slowest);
 
-    private static string FilePath => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-        "AbyssusTimer",
-        "settings.json");
+    private static string FilePath => Path.Combine(AppPaths.DataDirectory, "settings.json");
 
     public static AppSettings Load()
     {

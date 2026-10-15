@@ -28,6 +28,8 @@ public partial class App : Application
     {
         base.OnStartup(e);
 
+        AppPaths.ConfigureFromArgs(e.Args);
+
         ShutdownMode = ShutdownMode.OnExplicitShutdown;
 
         AppLog.Initialize();
@@ -72,11 +74,16 @@ public partial class App : Application
 
         HighResolutionTimer.Begin(1);
 
-        _engine = new TimerEngine
+        _engine = new TimerEngine(dataDirectory: AppPaths.DataDirectory)
         {
             PauseStopsTime = _settings.PauseStopsTime,
             AutoResetOnLobbyReturn = _settings.AutoResetOnLobbyReturn,
+            CountAllWeaponRunsAsAnyPercent = _settings.CountAllWeaponRunsAsAnyPercent,
+            AllWeaponPreloadChecklist = _settings.AllWeaponPreloadChecklist,
+            PbChartRunCount = _settings.PbChartRunCount,
             PlaySoundOnNewPb = _settings.PlaySoundOnNewPb,
+            PbSoundPath = _settings.PbSoundPath,
+            PbSoundVolume = _settings.PbSoundVolume,
             SelectedPrimaryTimer = Enum.TryParse<PrimaryTimerKind>(_settings.PrimaryTimer, out var primaryTimer)
                 ? primaryTimer
                 : PrimaryTimerKind.LoadCutsceneFree,
@@ -116,6 +123,10 @@ public partial class App : Application
             OverlayBiomeTextColor = _settings.OverlayBiomeTextColor,
             OverlayDepthTextColor = _settings.OverlayDepthTextColor,
             OverlayFloorTextColor = _settings.OverlayFloorTextColor,
+            OverlayWeaponFontSize = _settings.OverlayWeaponFontSize,
+            OverlayWeaponTextColor = _settings.OverlayWeaponTextColor,
+            OverlayStatusFontSize = _settings.OverlayStatusFontSize,
+            OverlayStatusTextColor = _settings.OverlayStatusTextColor,
             OverlayTitleFontSize = _settings.OverlayTitleFontSize,
             OverlayTitleTextColor = _settings.OverlayTitleTextColor,
             AlwaysShowOverlay = _settings.AlwaysShowOverlay,
@@ -137,6 +148,8 @@ public partial class App : Application
         };
 
         var configurator = new ConfiguratorWindow(_overlay, _engine, _settings);
+        if (AppPaths.IsShadow)
+            configurator.Title += " — SHADOW TEST (separate data, no overlay)";
         MainWindow = configurator;
         ShutdownMode = ShutdownMode.OnMainWindowClose;
 
@@ -215,7 +228,12 @@ public partial class App : Application
         {
             _settings.PauseStopsTime = _engine.PauseStopsTime;
             _settings.PlaySoundOnNewPb = _engine.PlaySoundOnNewPb;
+            _settings.PbSoundPath = _engine.PbSoundPath;
+            _settings.PbSoundVolume = _engine.PbSoundVolume;
             _settings.AutoResetOnLobbyReturn = _engine.AutoResetOnLobbyReturn;
+            _settings.CountAllWeaponRunsAsAnyPercent = _engine.CountAllWeaponRunsAsAnyPercent;
+            _settings.AllWeaponPreloadChecklist = _engine.AllWeaponPreloadChecklist;
+            _settings.PbChartRunCount = _engine.PbChartRunCount;
             _settings.PrimaryTimer = _engine.SelectedPrimaryTimer.ToString();
             _settings.ActiveCategory = _engine.ActiveCategory.ToString();
             _settings.ActivePlayerCount = _engine.ActivePlayerCount.ToString();
@@ -240,6 +258,10 @@ public partial class App : Application
             _settings.OverlayBiomeTextColor = _engine.OverlayBiomeTextColor;
             _settings.OverlayDepthTextColor = _engine.OverlayDepthTextColor;
             _settings.OverlayFloorTextColor = _engine.OverlayFloorTextColor;
+            _settings.OverlayWeaponFontSize = _engine.OverlayWeaponFontSize;
+            _settings.OverlayWeaponTextColor = _engine.OverlayWeaponTextColor;
+            _settings.OverlayStatusFontSize = _engine.OverlayStatusFontSize;
+            _settings.OverlayStatusTextColor = _engine.OverlayStatusTextColor;
             _settings.OverlayTitleFontSize = _engine.OverlayTitleFontSize;
             _settings.OverlayTitleTextColor = _engine.OverlayTitleTextColor;
             _settings.AlwaysShowOverlay = _engine.AlwaysShowOverlay;
